@@ -11,15 +11,12 @@ import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoNumber;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.storage.PuyoType;
 
-public class NextField {
+public class SimpleNextField {
 	public int[] fieldtops;
 	public int[][] field;
-	public int[][] nextfield;
-	public int[][][] nextfieldwithojama;
 	public List<Integer> myojama;
 	public List<Integer> enemyojama;
 	public List<Integer> nextmyojama;
-	public List<Integer> nextenemyojama;
 	public int myscore;
 	public int nextmyscore;
 	public Board myboard;
@@ -90,159 +87,60 @@ public class NextField {
 		return output;
 	}
 	
-	public List<Integer>[] CalcOjama(int sprungenemyojama) {
+	public List<Integer> CalcOjama() {
 		// おじゃまを降らせる
 		int myojamasum = 0;
-		int enemyojamasum = 0;
 		for (Integer myo : myojama) {
 			myojamasum += myo;
 		}
-		for (Integer eno : enemyojama) {
-			enemyojamasum += eno;
-		}
-		int tempojama = myscore / 70 - sprungenemyojama;
+		int tempojama = myscore / 70;
 		nextmyscore = myscore % 70;
 		List<Integer> tempmyojama = new ArrayList<Integer>();
-		List<Integer> tempenemyojama = new ArrayList<Integer>();
 		for (int myo : myojama) {
 			tempmyojama.add(myo);
 		}
-		for (int eno : enemyojama) {
-			tempenemyojama.add(eno);
-		}
-		if (myojamasum > 0) {
-			// おじゃまぷよが自分の方に降ってくる場合
-			if (tempojama > 0) {
-				// 相殺できる場合
-				if (myojamasum > tempojama) {
-					// すべては相殺できない場合
-					int tempojamaturn = 0;
-					while (tempojama > 0) {
-						if (tempmyojama.size() <= tempojamaturn) {
-							for (int i=tempmyojama.size();i<=tempojamaturn;i++) {
-								tempmyojama.add(0);
-							}
-						}
-						if (tempojama >= tempmyojama.get(tempojamaturn)) {
-							tempmyojama.set(tempojamaturn, 0);
-							tempojama -= tempmyojama.get(tempojamaturn);
-						}
-						else {
-							tempmyojama.set(tempojamaturn, tempmyojama.get(tempojamaturn) - tempojama);
-							tempojama = 0;
-						}
-						tempojamaturn++;
-					}
-				}
-				else {
-					// すべて相殺できる場合
-					tempmyojama = new ArrayList<Integer>();
-					for (int i=0;i<4;i++) {
-						tempmyojama.add(0);
-					}
-					tempojama -= myojamasum;
-					if (tempenemyojama.size() < tempojama/30+4) {
-						for (int i=tempenemyojama.size();i<tempojama/30+4;i++) {
-							tempenemyojama.add(0);
-						}
-					}
-					for (int i=0;i<tempojama/30;i++) {
-						tempenemyojama.set(i+3, 30);
-					}
-					tempenemyojama.set(tempojama/30+3, tempojama%30);
-				}
-			}
-			else {
-				// 自分の方に降ってくるおじゃまぷよがさらに増やされる場合
-				tempojama *= -1;
-				int tempojamaturn = 3;
+		if (tempojama > 0) {
+			// 相殺できる場合
+			if (myojamasum > tempojama) {
+				// すべては相殺できない場合
+				int tempojamaturn = 0;
 				while (tempojama > 0) {
 					if (tempmyojama.size() <= tempojamaturn) {
 						for (int i=tempmyojama.size();i<=tempojamaturn;i++) {
 							tempmyojama.add(0);
 						}
 					}
-					if (tempojama > (30 - tempmyojama.get(tempojamaturn))) {
-						tempojama -= 30 - tempmyojama.get(tempojamaturn);
-						tempmyojama.set(tempojamaturn, 30);
+					if (tempojama >= tempmyojama.get(tempojamaturn)) {
+						tempojama -= tempmyojama.get(tempojamaturn);
+						tempmyojama.set(tempojamaturn, 0);
 					}
 					else {
-						tempmyojama.set(tempojamaturn, tempmyojama.get(tempojamaturn) + tempojama);
+						tempmyojama.set(tempojamaturn, tempmyojama.get(tempojamaturn) - tempojama);
 						tempojama = 0;
 					}
 					tempojamaturn++;
-				}
-			}
-		}
-		else if (enemyojamasum > 0) {
-			// おじゃまぷよが相手の方に降ってくる場合
-			tempojama *= -1;
-			if (tempojama > 0) {
-				// 相手が相殺できる場合
-				if (enemyojamasum > tempojama) {
-					// すべては相殺できない場合
-					int tempojamaturn = 0;
-					while (tempojama > 0) {
-						if (tempenemyojama.size() <= tempojamaturn) {
-							for (int i=tempenemyojama.size();i<=tempojamaturn;i++) {
-								tempenemyojama.add(0);
-							}
-						}
-						if (tempojama >= tempenemyojama.get(tempojamaturn)) {
-							tempenemyojama.set(tempojamaturn, 0);
-							tempojama -= tempenemyojama.get(tempojamaturn);
-						}
-						else {
-							tempenemyojama.set(tempojamaturn, tempenemyojama.get(tempojamaturn) - tempojama);
-							tempojama = 0;
-						}
-						tempojamaturn++;
-					}
-				}
-				else {
-					// すべて相殺できる場合
-					tempenemyojama = new ArrayList<Integer>();
-					for (int i=0;i<4;i++) {
-						tempenemyojama.add(0);
-					}
-					if (tempmyojama.size() < tempojama/30+4) {
-						for (int i=tempmyojama.size();i<tempojama/30+4;i++) {
-							tempmyojama.add(0);
-						}
-					}
-					tempojama -= enemyojamasum;
-					for (int i=0;i<tempojama/30;i++) {
-						tempmyojama.set(i+3, 30);
-					}
-					tempmyojama.set(tempojama/30+3, tempojama%30);
 				}
 			}
 			else {
-				// 相手の方に降ってくるおじゃまぷよがさらに増やされる場合
-				tempojama *= -1;
-				int tempojamaturn = 3;
+				// すべて相殺できる場合
+				tempmyojama = new ArrayList<Integer>();
+				for (int i=0;i<3;i++) {
+					tempmyojama.add(0);
+				}
+				tempojama -= myojamasum;
 				while (tempojama > 0) {
-					if (tempenemyojama.size() <= tempojamaturn) {
-						for (int i=tempenemyojama.size();i<=tempojamaturn;i++) {
-							tempenemyojama.add(0);
-						}
-					}
-					if (tempojama > (30 - tempenemyojama.get(tempojamaturn))) {
-						tempojama -= 30 - tempenemyojama.get(tempojamaturn);
-						tempenemyojama.set(tempojamaturn, 30);
+					if (tempojama >= 30) {
+						tempmyojama.add(-30);
+						tempojama -= 30;
 					}
 					else {
-						tempenemyojama.set(tempojamaturn, tempenemyojama.get(tempojamaturn) + tempojama);
+						tempmyojama.add(-tempojama);
 						tempojama = 0;
 					}
-					tempojamaturn++;
 				}
 			}
 		}
-		List<Integer>[] output = new ArrayList[2];
-		output[0] = tempmyojama;
-		output[1] = tempenemyojama;
-		return output;
+		return tempmyojama;
 	}
 	
 	public boolean IsAlive(int[][] field) {
@@ -292,105 +190,6 @@ public class NextField {
 		return tempfield;
 	}
 	
-	public boolean[][] SixCnumber(int number) {
-		switch (number) {
-		case 0:
-			boolean[][] output0 = {{false, false, false, false, false, false}};
-			return output0;
-		case 1:
-			boolean[][] output1 = {{true, false, false, false, false, false},
-					{false, true, false, false, false, false},
-					{false, false, true, false, false, false},
-					{false, false, false, true, false, false},
-					{false, false, false, false, true, false},
-					{false, false, false, false, false, true}};
-			return output1;
-		case 2:
-			boolean[][] output2 = {{true, true, false, false, false, false},
-					{true, false, true, false, false, false},
-					{true, false, false, true, false, false},
-					{true, false, false, false, true, false},
-					{true, false, false, false, false, true},
-					{false, true, true, false, false, false},
-					{false, true, false, true, false, false},
-					{false, true, false, false, true, false},
-					{false, true, false, false, false, true},
-					{false, false, true, true, false, false},
-					{false, false, true, false, true, false},
-					{false, false, true, false, false, true},
-					{false, false, false, true, true, false},
-					{false, false, false, true, false, true},
-					{false, false, false, false, true, true}};
-			return output2;
-		case 3:
-			boolean[][] output3 = {{true, true, true, false, false, false},
-					{true, true, false, true, false, false},
-					{true, true, false, false, true, false},
-					{true, true, false, false, false, true},
-					{true, false, true, true, false, false},
-					{true, false, true, false, true, false},
-					{true, false, true, false, false, true},
-					{true, false, false, true, true, false},
-					{true, false, false, true, false, true},
-					{true, false, false, false, true, true},
-					{false, true, true, true, false, false},
-					{false, true, true, false, true, false},
-					{false, true, true, false, false, true},
-					{false, true, false, true, true, false},
-					{false, true, false, true, false, true},
-					{false, true, false, false, true, true},
-					{false, false, true, true, true, false},
-					{false, false, true, true, false, true},
-					{false, false, true, false, true, true},
-					{false, false, false, true, true, true}};
-			return output3;
-		case 4:
-			boolean[][] output2_ = {{true, true, false, false, false, false},
-					{true, false, true, false, false, false},
-					{true, false, false, true, false, false},
-					{true, false, false, false, true, false},
-					{true, false, false, false, false, true},
-					{false, true, true, false, false, false},
-					{false, true, false, true, false, false},
-					{false, true, false, false, true, false},
-					{false, true, false, false, false, true},
-					{false, false, true, true, false, false},
-					{false, false, true, false, true, false},
-					{false, false, true, false, false, true},
-					{false, false, false, true, true, false},
-					{false, false, false, true, false, true},
-					{false, false, false, false, true, true}};
-			boolean[][] output4 = new boolean[15][6];
-			for (int i=0;i<15;i++) {
-				for (int j=0;j<6;j++) {
-					output4[i][j] = !output2_[i][j];
-				}
-			}
-			return output4;
-		case 5:
-			boolean[][] output1_ = {{true, false, false, false, false, false},
-					{false, true, false, false, false, false},
-					{false, false, true, false, false, false},
-					{false, false, false, true, false, false},
-					{false, false, false, false, true, false},
-					{false, false, false, false, false, true}};
-			boolean[][] output5 = new boolean[6][6];
-			for (int i=0;i<6;i++) {
-				for (int j=0;j<6;j++) {
-					output5[i][j] = !output1_[i][j];
-				}
-			}
-			return output5;
-		case 6:
-			boolean[][] output6 = {{true, true, true, true, true, true}};
-			return output6;
-		default:
-			boolean[][] output0_ = {{false, false, false, false, false, false}};
-			return output0_;
-		}
-	}
-	
-	
 	public boolean SearchField(int nrensa) {
 		List<List<int[]>> rensapuyo = new ArrayList<List<int[]>>();
 		for (int i=0;i<width;i++) {
@@ -400,12 +199,14 @@ public class NextField {
 					// 各ぷよについてすでに調べたぷよとつながっているかを見る
 					int kuminum = rensapuyo.size();
 					boolean[] connect = new boolean[kuminum];
-					// eclipseのデフォルトだとソースレベルが低すぎるかもしれない
 					int tempkuminum = 0;
 					for (List<int[]> kumi : rensapuyo) {
 						for (int[] puyo : kumi) {
-							int tempdistance = (puyo[0] - i) * (puyo[1] - j);
-							connect[tempkuminum] = (tempdistance == 1 || tempdistance == -1) && (puyo[2] == field[i][j]); 
+							boolean isneighbor = ((puyo[0] == i) &&  (puyo[1] == j + 1 || puyo[1] == j - 1)) || ((puyo[0] == i + 1 || puyo[0] == i - 1) && (puyo[1] == j));
+							if (isneighbor && (puyo[2] == field[i][j])) {
+								connect[tempkuminum] = true;
+								break;
+							}
 						}
 						tempkuminum++;
 					}

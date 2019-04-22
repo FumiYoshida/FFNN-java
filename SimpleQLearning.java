@@ -15,13 +15,14 @@ import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoDirection;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoNumber;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.storage.PuyoType;
 
-public class QLearning {
+public class SimpleQLearning {
 	Puyo[] availablemypuyos;
 	Puyo[] availableenemypuyos;
 	int[] availablemypuyocolumns;
 	int[] availableenemypuyocolumns;
 	Action bestaction;
-	
+	double[] lastmyinput;
+	double[] lastenemyinput;
 	
 	int colornum = 5;
 	int cnp1; // おじゃまも含めたぷよの種類の数
@@ -34,12 +35,14 @@ public class QLearning {
 	double epsilon = 0.5;
 	double gamma = 0.95;
 	
+	double errorsum;
+	
 	public void FFNNSettings(Board board) {
 		// これは初回に呼べばよい
 		cnp1 = colornum + 1;
 		width = board.getField().getWidth();
 		height = board.getField().getHeight()-1; // 12段目まで埋まっていて縦に置いたときにIndexOutofRangeにならないよう修正する
-		inputlen =  width * height * cnp1 * 2 + maxojamalistnum * 2 + 2 + colornum * 6;
+		inputlen =  width * height * cnp1 + maxojamalistnum + 1 + colornum * 6;
 		layers[0] = inputlen;
 		nn = new FFNN();
 		nn.layers = layers;
@@ -52,126 +55,140 @@ public class QLearning {
 		MakeAllActions(board, enemyboard);
 		int myactionnum = availablemypuyos.length;
 		int enemyactionnum = availableenemypuyos.length;
-		NextField[] mynexts = new NextField[myactionnum];
-		NextField[] enemynexts = new NextField[enemyactionnum];
-		int[] sprungenemyojama = new int[enemyactionnum];
+		double[] myevaluations = new double[myactionnum];
+		double[] enemyevaluations = new double[enemyactionnum];
 		double[][] evaluationmatrix = new double[myactionnum][enemyactionnum];
-		for (int i=0;i<enemyactionnum;i++) {
-			enemynexts[i] = new NextField();
-			enemynexts[i].Settings(availableenemypuyos[i], availableenemypuyocolumns[i], enemyboard, enemy, board);
-			sprungenemyojama[i] = enemynexts[i].myscore;
-		}
 		for (int i=0;i<myactionnum;i++) {
-			mynexts[i] = new NextField();
-			mynexts[i].Settings(availablemypuyos[i], availablemypuyocolumns[i], board, me, enemyboard);
-			if (mynexts[i].IsAlive(mynexts[i].field)) {
-				for (int j=0;j<enemyactionnum;j++) {
-					List<Integer>[] tempojama = mynexts[i].CalcOjama(sprungenemyojama[j]);
-					int[][] tempfield = mynexts[i].RainDownOjama(tempojama[0]);
-					int[][] tempenemyfield = enemynexts[j].RainDownOjama(tempojama[1]); // RainDownを呼び出すとtempojama[1]が1ターン進む
-					double[] tempinput = MakeInput(tempfield, tempenemyfield, tempojama[0], tempojama[1], mynexts[i].myscore, enemynexts[j].myscore, board.getNextPuyo(), board.getNextNextPuyo(), null);
-					evaluationmatrix[i][j] = Evaluate(tempinput); // order最大
-				}
-			}
-			else {
-				// 13段目において連鎖が起こらず、ゲームオーバーとなる場合
-				for (int j=0;j<enemyactionnum;j++) {
-					evaluationmatrix[i][j] = -30000;
-				}
-			}
+			SimpleNextField snf = new SimpleNextField();
+			snf.Settings(availablemypuyos[i], availablemypuyocolumns[i], board, me, enemyboard);
+			int[][] enf = snf.RainDownOjama(snf.CalcOjama());
+			double[] tempmyinput = MakeInput(enf, snf.nextmyojama, snf.nextmyscore - enemy.getOjamaScore(), board.getCurrentPuyo(), board.getNextPuyo(), null);
+			double[][] tempinput = {tempmyinput};
+			nn.ChangeInput(tempinput);
+			nn.ForwardPropagation();
+			myevaluations[i] = nn.outputs[nn.layernum-1][0][0];
 		}
-		if (evaluationmatrix.length != 0) {
-			Evaluation evaluator = new Evaluation();
-			evaluator.Settings(evaluationmatrix);
-			evaluator.Main();
-
+		for (int i=0;i<enemyactionnum;i++) {
+			SimpleNextField snf = new SimpleNextField();
+			snf.Settings(availableenemypuyos[i], availableenemypuyocolumns[i], enemyboard, enemy, board);
+			int[][] enf = snf.RainDownOjama(snf.CalcOjama());
+			double[] tempenemyinput = MakeInput(enf, snf.nextmyojama, snf.nextmyscore - me.getOjamaScore(), board.getCurrentPuyo(), board.getNextPuyo(), null);
+			double[][] tempinput = {tempenemyinput};
+			nn.ChangeInput(tempinput);
+			nn.ForwardPropagation();
+			enemyevaluations[i] = nn.outputs[nn.layernum-1][0][0];
+		}
+		if (myactionnum * enemyactionnum != 0) {
+			double myevaluation = myevaluations[0];
+			int selectindex = 0;
+			for (int i=0;i<myactionnum;i++) {
+				if (myevaluations[i] > myevaluation) {
+					myevaluation = myevaluations[i];
+					selectindex = i;
+				}
+			}
+			double enemyevaluation = enemyevaluations[0];
+			for (int i=0;i<enemyactionnum;i++) {
+				if (enemyevaluations[i] > enemyevaluation) {
+					enemyevaluation = enemyevaluations[i];
+				}
+			}
 			// 学習
-			double teacher = evaluator.evaluationvalue;
+			double myteacher = myevaluation;
 			NextField converter = new NextField();
 			int[][] myf = converter.FieldtoFieldMatrix(board.getField());
-			int[][] enf = converter.FieldtoFieldMatrix(enemyboard.getField());
-			double[] input = MakeInput(myf, enf, board.getNumbersOfOjamaList(), enemyboard.getNumbersOfOjamaList(), me.getOjamaScore(), enemy.getOjamaScore(), board.getCurrentPuyo(), board.getNextPuyo(), board.getNextNextPuyo());
-			Teach(input, teacher * gamma);
+			List<Integer> myol = board.getNumbersOfOjamaList();
+			List<Integer> enol = enemyboard.getNumbersOfOjamaList();
+			List<Integer> difol = DifferenceOfOjamaList(myol, enol);
+			int difscore = me.getOjamaScore() - enemy.getOjamaScore();
+			double[] input = MakeInput(myf, difol, difscore, board.getCurrentPuyo(), board.getNextPuyo(), board.getNextNextPuyo());
+			lastmyinput = input;
+			Teach(input, myteacher * gamma);
+			errorsum = Math.abs(nn.outputs[nn.layernum-1][0][0] - myteacher * gamma);
+
+			double enemyteacher = enemyevaluation;
+			NextField econverter = new NextField();
+			int[][] enemyf = econverter.FieldtoFieldMatrix(enemyboard.getField());
+			List<Integer> mdifol = DifferenceOfOjamaList(enol, myol);
+			int mdifscore = -me.getOjamaScore() + enemy.getOjamaScore();
+			double[] einput = MakeInput(enemyf, mdifol, mdifscore, board.getCurrentPuyo(), board.getNextPuyo(), board.getNextNextPuyo());
+			lastenemyinput = einput;
+			Teach(einput, enemyteacher * gamma);
+			errorsum += Math.abs(nn.outputs[nn.layernum-1][0][0] - enemyteacher * gamma);
 			
 			// 行動の選択
-			double[] myc = evaluator.mychoiceprobs[evaluator.mychoiceprobs.length-1];
-			double maxprob = myc[0];
-			int maxindex = 0;
-			for (int i=1;i<myc.length;i++) {
-				if (myc[i] > maxprob) {
-					maxindex = i;
-					maxprob = myc[i];
-				}
-			}
 			Random rd = new Random(System.currentTimeMillis());
-			int selectindex = 0;
 			if (rd.nextDouble() < epsilon) {
 				selectindex = rd.nextInt(availablemypuyos.length);
 			}
-			else {
-				selectindex = maxindex;
-			}
 			bestaction = new Action(availablemypuyos[selectindex], availablemypuyocolumns[selectindex]);
-			return bestaction;
+			return bestaction;	
 		}
-		else {
-			bestaction = new Action(PuyoDirection.DOWN, 0);
-			return bestaction;
-		}
+    	else {
+    		if (myactionnum == 0) {
+    			Teach(lastmyinput, -30000);
+    		}
+    		else if (enemyactionnum == 0) {
+    			Teach(lastenemyinput, -30000);
+    		}
+    		bestaction = new Action(PuyoDirection.DOWN, 0);
+    		return bestaction;
+    	}
+	
 	}
 	
+
 	
-	public double[] MakeInput(int[][] myfield, int[][] enemyfield, List<Integer> myojamalist, List<Integer> enemyojamalist, int myscore, int enemyscore, Puyo curpuyo, Puyo nexpuyo, Puyo nexnexpuyo) {
+	public List<Integer> DifferenceOfOjamaList(List<Integer> myol, List<Integer> enol){
+		List<Integer> difol = new ArrayList<Integer>();
+		for (int i=0;i<Math.min(myol.size(), enol.size());i++) {
+			difol.add(myol.get(i) - enol.get(i));
+		}
+		if (myol.size() > enol.size()) {
+			for (int i=enol.size();i<myol.size();i++) {
+				difol.add(myol.get(i));
+			}
+		}
+		else {
+			for (int i=myol.size();i<enol.size();i++) {
+				difol.add(-enol.get(i));
+			}
+		}
+		return difol;
+	}
+	
+	public double[] MakeInput(int[][] field, List<Integer> ojamalistdif, int scoredif, Puyo curpuyo, Puyo nexpuyo, Puyo nexnexpuyo) {
 		int colornum = 5;
 		int cnp1 = colornum + 1; // おじゃまも含めたぷよの種類の数
-		int width = myfield.length;
-		int height = myfield[0].length;
+		int width = field.length;
+		int height = field[0].length;
 		int maxojamalistnum = 10;
-		int outlen = width * height * cnp1 * 2 + maxojamalistnum * 2 + 2 + colornum * 6;
+		int outlen = width * height * cnp1 + maxojamalistnum + 1 + colornum * 6;
 		double[] output = new double[outlen];
 		int serial = 0;
 		// 自分の盤面のぷよの位置と種類を入れる
 		for (int i=0;i<width;i++) {
 			for (int j=0;j<height;j++) {
-				if (myfield[i][j] != 0) {
-					if (myfield[i][j] > 6) {
-						output[serial+5] = 10 / (myfield[i][j] - 6); 
+				if (field[i][j] != 0) {
+					if (field[i][j] > 6) {
+						output[serial+5] = 10 / (field[i][j] - 6); 
 					}
 					else{
-						output[serial+myfield[i][j]-1] = 10; 
+						output[serial+field[i][j]-1] = 10; 
 					}
 				}
 				serial += cnp1;
 			}
 		}
-		// 相手の盤面のぷよの位置と種類を入れる
-		for (int i=0;i<width;i++) {
-			for (int j=0;j<height;j++) {
-				if (enemyfield[i][j] != 0) {
-					if (enemyfield[i][j] > 6) {
-						output[serial+5] = 10 / (enemyfield[i][j] - 6); 
-					}
-					else{
-						output[serial+enemyfield[i][j]-1] = 10; 
-					}
-				}
-				serial += cnp1;
-			}
-		}
+		
 		// 互いに10ターン以内に降ってくるおじゃまの数を入れる
-		for (int i=0;i<Math.min(myojamalist.size(), maxojamalistnum);i++) {
-			output[serial] = myojamalist.get(i);
+		for (int i=0;i<Math.min(ojamalistdif.size(), maxojamalistnum);i++) {
+			output[serial] = ojamalistdif.get(i);
 			serial++;
 		}
-		serial += Math.max(0, (maxojamalistnum - myojamalist.size()));
-		for (int i=0;i<Math.min(enemyojamalist.size(), maxojamalistnum);i++) {
-			output[serial] = enemyojamalist.get(i);
-			serial++;
-		}
-		serial += Math.max(0, (maxojamalistnum - enemyojamalist.size()));
-		output[serial] = myscore;
-		output[serial+1] = enemyscore;
-		serial+=2;
+		serial += Math.max(0, (maxojamalistnum - ojamalistdif.size()));
+		output[serial] = scoredif;
+		serial++;
 		// ツモを入れる
 		EnterPuyoTypeWithoutOjama(curpuyo.getPuyoType(PuyoNumber.FIRST), output, serial);
 		EnterPuyoTypeWithoutOjama(curpuyo.getPuyoType(PuyoNumber.SECOND), output, serial+colornum);

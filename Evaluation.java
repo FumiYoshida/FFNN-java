@@ -85,7 +85,12 @@ public class Evaluation {
 				tempwinningrate += mychoiceprobs[mmm1][i] * winningratematrix[i][j];
 			}
 			enemywinningrates[j] = 1 - tempwinningrate;
-			enemychoiceweights[j] = enemywinningrates[j] / (1 - enemywinningrates[j]);
+			if (enemywinningrates[j] == 1) {
+				enemychoiceweights[j] = 30000;
+			}
+			else {
+				enemychoiceweights[j] = enemywinningrates[j] / (1 - enemywinningrates[j]);
+			}
 			enemyweightsum += enemychoiceweights[j];
 		}
 		for (int j=0;j<enemymovenum;j++) {
@@ -99,7 +104,12 @@ public class Evaluation {
 				tempwinningrate += enemychoiceprobs[j] * winningratematrix[i][j];
 			}
 			mywinningrates[i] = tempwinningrate;
-			mychoiceweights[i] = mywinningrates[i] / (1 - mywinningrates[i]);
+			if (mywinningrates[i] == 1) {
+				mychoiceweights[i] = 30000;
+			}
+			else {
+				mychoiceweights[i] = mywinningrates[i] / (1 - mywinningrates[i]);
+			}
 			myweightsum += mychoiceweights[i];
 		}
 		for (int i=1;i<mymovenum;i++) {
@@ -111,12 +121,17 @@ public class Evaluation {
 	}
 	
 	public double Distance(double[] x, double[] y) {
-		int veclen = Math.min(x.length, y.length);
-		double tempsum = 0;
-		for (int i=0;i<veclen;i++) {
-			tempsum += (x[i] - y[i]) * (x[i] - y[i]);
+		if (x.length == 0 || y.length == 0) {
+			return 0;
 		}
-		return Math.sqrt(tempsum / veclen);
+		else {
+			int veclen = Math.min(x.length, y.length);
+			double tempsum = 0;
+			for (int i=0;i<veclen;i++) {
+				tempsum += (x[i] - y[i]) * (x[i] - y[i]);
+			}
+			return Math.sqrt(tempsum / veclen);
+		}
 	}
 	
 	public int EstimateCycle() {
@@ -131,17 +146,22 @@ public class Evaluation {
 			sumdistance += distances[i];
 			sumdistancepow2 += distances[i] * distances[i];
 		}
-		double averagedistance = sumdistance / mmm1;
-		double stddistance = Math.sqrt(averagedistance * averagedistance - sumdistancepow2 / mmm1);
-		double threshold = averagedistance - stddistance * 0.5;
-		int cycle = 1;
-		for (int i=1;i<=mmm1;i++) {
-			if (distances[mmm1-i] <threshold) {
-				cycle = i;
-				break;
-			}
+		if (mmm1 == 0) {
+			return 1;
 		}
-		return cycle;
+		else {
+			double averagedistance = sumdistance / mmm1;
+			double stddistance = Math.sqrt(averagedistance * averagedistance - sumdistancepow2 / mmm1);
+			double threshold = averagedistance - stddistance * 0.5;
+			int cycle = 1;
+			for (int i=1;i<=mmm1;i++) {
+				if (distances[mmm1-i] <threshold) {
+					cycle = i;
+					break;
+				}
+			}
+			return cycle;
+		}
 	}
 	
 	public double[] BestChoiceProbs(int cycle) {
@@ -162,7 +182,19 @@ public class Evaluation {
 			tempwinningrate += mychoiceprobs[mmm1][i] * mywinningrates[i];
 		}
 		mywinningrate = tempwinningrate;
-		evaluationvalue = Math.log(mywinningrate / (1 - mywinningrate));
+		if (mywinningrate == 0) {
+			evaluationvalue = -30000;
+		}
+		else if (mywinningrate == 1) {
+			evaluationvalue = 30000;
+		}
+		else {
+			evaluationvalue = Math.log(mywinningrate / (1 - mywinningrate));
+		}
+		if (evaluationvalue != evaluationvalue) {
+			// evaluationvalueがNaNになってしまったら
+			evaluationvalue = 0;
+		}
 	}
 	
 	
