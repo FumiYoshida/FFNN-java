@@ -18,6 +18,7 @@ public class FFNN {
 	public String savedirectory;
 	public boolean usermsprop;
 	public double rmspropalpha = 0.99;
+	public double alpha = 0.001;
 	
 	// ここから自動生成
 	public int layernum;
@@ -216,7 +217,7 @@ public class FFNN {
 			else {
 				weighterrorsquare[l] += tempnum;
 			}
-			double eta = 0.01 / Math.sqrt(weighterrorsquare[l] + 0.00000001);
+			double eta = alpha / Math.sqrt(weighterrorsquare[l] + 0.00000001);
 			for (int i=0;i<tate;i++) {
 				for (int j=0;j<yoko;j++) {
 					weights[l][i][j] -= eta * deltaweights[l][i][j];
@@ -243,7 +244,7 @@ public class FFNN {
 			else {
 				biaserrorsquare[l] += tempnum;
 			}
-			double eta = 0.01 / Math.sqrt(biaserrorsquare[l] + 0.00000001);
+			double eta = alpha / Math.sqrt(biaserrorsquare[l] + 0.00000001);
 			for (int j=0;j<yoko;j++) {
 				biases[l][j] -= eta * deltabiases[j];
 			}

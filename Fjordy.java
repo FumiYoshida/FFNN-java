@@ -55,7 +55,7 @@ public class Fjordy extends AbstractSamplePlayer {
 				honki--;
 			}
 			else {
-				dqn.epsilon = 0.2; // default : 0.1
+				dqn.epsilon = 0.1; // default : 0.1
 				honki--;
 			}
 		}

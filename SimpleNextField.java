@@ -165,7 +165,6 @@ public class SimpleNextField {
 		nextmyojama = myojamalist;
 		int raindan = thisturnojama / 6;
 		int randomojama = thisturnojama % 6; // １段に満たない分はランダムに降る
-		// 6Crandomojama 通りがあるのでそれらすべてを列挙する
 		int[][] tempfield = Arrays.copyOf(field, width);
 		// まず必要な分のおじゃまを降らせる
 		for (int i=0;i<width;i++) {
@@ -183,7 +182,7 @@ public class SimpleNextField {
 			}
 			for (int j=0;j<width;j++) {
 				if ( fieldtops[j]<height-2) {
-					tempfield[j][fieldtops[j]+1] = 6 + aiterunum;
+					tempfield[j][fieldtops[j]+1] = 6;
 				}
 			}
 		}

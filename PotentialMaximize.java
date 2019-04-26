@@ -16,7 +16,7 @@ import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoDirection;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoNumber;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.storage.PuyoType;
 
-public class ScoreQLearning {
+public class PotentialMaximize {
 	Puyo[] availablemypuyos;
 	Puyo[] availableenemypuyos;
 	int[] availablemypuyocolumns;
@@ -33,8 +33,7 @@ public class ScoreQLearning {
 	int inputlen;
 	int[] layers = {-1, 400, 100, 25, 1};
 	FFNN nn;
-	// FFNN nn;
-	double epsilon = 0;
+	double epsilon = 0.5;
 	double gamma = 0.95;
 	
 	double evaluationvalue;
@@ -49,7 +48,6 @@ public class ScoreQLearning {
 		inputlen = width * height * (width * height - 1) / 2;
 		layers[0] = inputlen;
 		nn = new FFNN();
-		// nn = new FFNN();
 		nn.layers = layers;
 		nn.firstinput = new double[1][inputlen];
 		nn.Settings();
@@ -68,13 +66,15 @@ public class ScoreQLearning {
 			for (int i=0;i<myactionnum;i++) {
 				SimpleNextField snf = new SimpleNextField();
 				snf.Settings(availablemypuyos[i], availablemypuyocolumns[i], board, me, enemyboard);
+				/*
 				int tempscore = snf.myscore - me.getOjamaScore();
 				int[][] myf = snf.RainDownOjama(snf.CalcOjama());
-				// double[] tempmyinput = MakeInput(myf, snf.nextmyojama, snf.nextmyscore - enemy.getOjamaScore(), board.getNextPuyo(), board.getNextNextPuyo(), null);
+				double[] tempmyinput = MakeInput(myf, snf.nextmyojama, snf.nextmyscore - enemy.getOjamaScore(), board.getNextPuyo(), board.getNextNextPuyo(), null);
 				double[] tempmyinput = MakeStateMatrix(myf);
 				double[][] tempinput = {tempmyinput};
 				nn.ChangeInput(tempinput);
 				nn.ForwardPropagation();
+				*/
 				myevaluations[i] = nn.outputs[nn.layernum-1][0][0] + tempscore / gamma;
 			}
 			double myevaluation = myevaluations[0];
