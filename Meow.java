@@ -192,10 +192,9 @@ public class Meow extends AbstractSamplePlayer {
 					int tempsecondscore = bnf.score;
 					for (int k=0;k<mythirdfields.length;k++) {
 						bnf.Calc(mythirdfields[k], mythirdojamafield, false, true, false, 0, 0);
-						int tempthirdscore = bnf.score;
-						int tempfirepossibility = bnf.firepossibility;					
+						int tempthirdscore = bnf.score;			
 						// int temp = (int)(tempfirstscore * 1.1 + tempsecondscore * 1.05 + tempthirdscore + tempfirepossibility * 0);
-						int temp = (int)(tempfirstscore * 1.1 + tempsecondscore * 1.05 + tempthirdscore + tempfirepossibility * 0.3 * (0.5 + Math.exp(1 - bnf.numtofire)));
+						int temp = (int)(tempfirstscore * 1.1 + tempsecondscore * 1.05 + tempthirdscore + bnf.firepossibility);
 						if (temp > maxsumscores[i]) {
 							maxsumscores[i] = temp;
 						}

@@ -39,7 +39,7 @@ public class BitNextField {
 	
 	public int nrensa;
 	public int score;
-	public int firepossibility;
+	public double firepossibility;
 	public int numtofire;
 	public BiFunction<Integer, Integer, Double> firepossibilityevaluator;
 	public double firepossibilityevaluation;
@@ -85,7 +85,8 @@ public class BitNextField {
 		}
 		
 		// 表面にあるぷよを消したときの得点と、消すまでに必要なぷよの数から、評価値を出す関数を設定する
-		firepossibilityevaluator = (firepos, numtof) -> firepos * 0.3 * (0.5 + Math.exp(1 - numtof));
+		double[] tempmulti = {0, 0.5, 0.4, 0.25};
+		firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
 		
 		// topindexを返す関数で参照するテーブルを作る
 		topindextable = new int[ 64 ];
@@ -410,11 +411,6 @@ public class BitNextField {
 		    tempdata |= tempdata >>> 15;
 			tempdata |= (tempdata >>> 5) | (tempdata >>> 10);
 			int erasecolornum = Long.bitCount(tempdata & (long)31);
-			if (erasecolornum < 1) {
-				int a00 = 0;
-				int b00 = a00;
-				
-			}
 			score += scoretable[nrensa][erasenum][erasecolornum - 1];
 			// 消える場所の隣のおじゃまも消していく
 			
@@ -655,7 +651,7 @@ public class BitNextField {
 			long[] savedfield = {a, b, c, d, e, f};
 			long[] savedojama = {ojamaa, ojamab, ojamac, ojamad, ojamae, ojamaf};
 			int savedscore = score;
-			int maxfirepossibility = 0;
+			double maxfirepossibility = 0;
 			numtofire = 0;
 			
 			while (asurface != 0) {
@@ -667,12 +663,14 @@ public class BitNextField {
 				erasea |= ((erasea >>> 5) & aue) | ((erasea & aue) << 5); // 二つ上から二つ下までを見る
 				long eraseb = erasea & amigi;
 				long erasec = eraseb & bmigi;
-				erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-				eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-				erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb);
 				// 発火に必要なぷよの数を調べる
 				int tempnumtofire = 4 - Long.bitCount(erasea) - Long.bitCount(eraseb) - Long.bitCount(erasec);  
 
+				// おじゃまを消す
+				erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+				eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+				erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb);
+				
 				// 既に消したところは、今後消してみる位置のリストから外す
 				asurface ^= asurface & erasea;
 				bsurface ^= bsurface & eraseb;
@@ -691,20 +689,16 @@ public class BitNextField {
 				
 				// 連鎖を計算する
 				Calc(tempfield, tempojama, false, false, false, 0, 0, true);
-				if (tempnumtofire <  2) {
-					int aa = 0;
-					int bb = aa;
-				}
-				if (score + 40 > maxfirepossibility) {
-					maxfirepossibility = score + 40;
-					numtofire = tempnumtofire;
+				double tempeva = firepossibilityevaluator.apply(score + 40, tempnumtofire);
+				if (tempeva > maxfirepossibility) {
+					maxfirepossibility = tempeva;
 				}
 			}
 			
 			while (bsurface != 0) {
 				long eraseb = bsurface & (-bsurface);
 				eraseb |= ((eraseb >>> 5) & bue) | ((eraseb & bue) << 5);
-				eraseb |= ((eraseb >>> 5) & cue) | ((eraseb & cue) << 5);
+				eraseb |= ((eraseb >>> 5) & bue) | ((eraseb & bue) << 5);
 				long erasea = eraseb & amigi;
 				long erasec = eraseb & bmigi;
 				long erased = erasec & cmigi;
@@ -726,9 +720,9 @@ public class BitNextField {
 				long[] tempfield = {as[0], bs[0], cs[0], ds[0], es[0], fs[0]};
 				long[] tempojama = {as[1], bs[1], cs[1], ds[1], es[1], fs[1]};
 				Calc(tempfield, tempojama, false, false, false, 0, 0, true);
-				if (score + 40> maxfirepossibility) {
-					maxfirepossibility = score + 40;
-					numtofire = tempnumtofire;
+				double tempeva = firepossibilityevaluator.apply(score + 40, tempnumtofire);
+				if (tempeva > maxfirepossibility) {
+					maxfirepossibility = tempeva;
 				}
 			}
 			
@@ -760,9 +754,9 @@ public class BitNextField {
 				long[] tempfield = {as[0], bs[0], cs[0], ds[0], es[0], fs[0]};
 				long[] tempojama = {as[1], bs[1], cs[1], ds[1], es[1], fs[1]};
 				Calc(tempfield, tempojama, false, false, false, 0, 0, true);
-				if (score + 40> maxfirepossibility) {
-					maxfirepossibility = score + 40;
-					numtofire = tempnumtofire;
+				double tempeva = firepossibilityevaluator.apply(score + 40, tempnumtofire);
+				if (tempeva > maxfirepossibility) {
+					maxfirepossibility = tempeva;
 				}
 			}
 			
@@ -794,10 +788,9 @@ public class BitNextField {
 				long[] tempfield = {as[0], bs[0], cs[0], ds[0], es[0], fs[0]};
 				long[] tempojama = {as[1], bs[1], cs[1], ds[1], es[1], fs[1]};
 				Calc(tempfield, tempojama, false, false, false, 0, 0, true);
-
-				if (score + 40> maxfirepossibility) {
-					maxfirepossibility = score + 40;
-					numtofire = tempnumtofire;
+				double tempeva = firepossibilityevaluator.apply(score + 40, tempnumtofire);
+				if (tempeva > maxfirepossibility) {
+					maxfirepossibility = tempeva;
 				}
 			}
 			
@@ -826,10 +819,9 @@ public class BitNextField {
 				long[] tempfield = {as[0], bs[0], cs[0], ds[0], es[0], fs[0]};
 				long[] tempojama = {as[1], bs[1], cs[1], ds[1], es[1], fs[1]};
 				Calc(tempfield, tempojama, false, false, false, 0, 0, true);
-
-				if (score + 40> maxfirepossibility) {
-					maxfirepossibility = score + 40;
-					numtofire = tempnumtofire;
+				double tempeva = firepossibilityevaluator.apply(score + 40, tempnumtofire);
+				if (tempeva > maxfirepossibility) {
+					maxfirepossibility = tempeva;
 				}
 			}
 			
@@ -855,15 +847,10 @@ public class BitNextField {
 				long[] tempfield = {as[0], bs[0], cs[0], ds[0], es[0], fs[0]};
 				long[] tempojama = {as[1], bs[1], cs[1], ds[1], es[1], fs[1]};
 				Calc(tempfield, tempojama, false, false, false, 0, 0, true);
-
-				if (score + 40> maxfirepossibility) {
-					maxfirepossibility = score + 40;
-					numtofire = tempnumtofire;
+				double tempeva = firepossibilityevaluator.apply(score + 40, tempnumtofire);
+				if (tempeva > maxfirepossibility) {
+					maxfirepossibility = tempeva;
 				}
-			}
-			if (maxfirepossibility > 10000) {
-				int a00 = 0;
-				int b00 = a00;
 			}
 			firepossibility = maxfirepossibility;
 			score = savedscore;
