@@ -16,6 +16,7 @@ import jp.ac.nagoya_u.is.ss.kishii.usui.system.storage.PuyoType;
 public class FirePossibility {
 	// 次にどんな色が来てほしいかを求める
 	public int[] colorstofire;
+	public int numtofire;
 	public String request;
 	public int[][] nextfield;
 	public int myscoreincrement;
@@ -93,7 +94,7 @@ public class FirePossibility {
 				List<int[]> temp = copyofcpuyo.get(i);
 				int temps = temp.size(); // 途中でtempを書き換えるので先に値を保存しておく
 				for (int j=0;j<4-temps;j++) {
-					temp.add(temp.get(0)); // getだけどこれでcopyofcpuyoが書き換わっている
+					temp.add(temp.get(0)); // copyoucpuyoのgetだけどこれでcopyofcpuyoが書き換わっている
 				}
 				tempcpuyos.add(copyofcpuyo);
 			}
@@ -147,11 +148,13 @@ public class FirePossibility {
 		// でもまあ一旦これで出力する
 		// ほしいぷよを考える
 		colorstofire = new int[5];
+		numtofire = 0;
 		if (cpuyos.size() > 0) {
 			List<int[]> ignitionpoint = cpuyos.get(maxscoreindex);
 			int ignitioncolor = ignitionpoint.get(0)[2];
 			int gunpowderamount = 4 - ignitionpoint.size();
 			colorstofire[ignitioncolor - 1] = gunpowderamount;
+			numtofire += gunpowderamount;
 		}
 		MakeRequestString();
 		if (maxscore == 40) {
