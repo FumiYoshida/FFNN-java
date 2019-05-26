@@ -146,7 +146,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					for (int k=0;k<enemythirdfields.length;k++) {
 						bnf.CalcEnemy(enemythirdfields[k]);
 						int tempthirdscore = enemythirdfields[k].score;
-						double averagefourthscore = bnf.Tsumos(enemythirdfields[k]);
+						double averagefourthscore = bnf.Tsumos(enemythirdfields[k], true);
 						/*
 						double averagefourthscore = 0;
 						for (int l=0;l<15;l++) {
@@ -216,8 +216,8 @@ public class FastMeow4 extends AbstractSamplePlayer {
 						bnf.CalcEnemy(mythirdfields[k]);
 						int tempthirdscore = mythirdfields[k].score;
 						double thirdpossibility = mythirdfields[k].firepossibility;
-						double averagefourthscore = bnf.Tsumos(mythirdfields[k]);
-						double tempfourtheva = tempfirstscore * 1.15  + tempsecondscore * 1.1 + tempthirdscore * 1.05 + averagefourthscore + thirdpossibility;
+						double averagefourthscore = bnf.Tsumos(mythirdfields[k], false);
+						double tempfourtheva = tempfirstscore * 1.15  + tempsecondscore * 1.1 + tempthirdscore * 1.05 + averagefourthscore + thirdpossibility * 1.5;
 						mymaxsumscores[i] = Math.max(mymaxsumscores[i], tempfourtheva);
 					}
 				}
