@@ -147,20 +147,6 @@ public class FastMeow4 extends AbstractSamplePlayer {
 						bnf.CalcEnemy(enemythirdfields[k]);
 						int tempthirdscore = enemythirdfields[k].score;
 						double averagefourthscore = bnf.Tsumos(enemythirdfields[k], true);
-						/*
-						double averagefourthscore = 0;
-						for (int l=0;l<15;l++) {
-							// 各つもについて見る
-							FieldInfo enemyfourthfield = bnf.Tsumos(enemythirdfields[k], l);
-							FieldInfo[] enemyfourthfields = enemyfourthfield.AvailableFields(0, 0);
-							double tempfourthscore = 0; 
-							for (int m=0;m<enemyfourthfields.length;m++) {
-								bnf.Calc(enemyfourthfields[m], false, false);
-								tempfourthscore = Math.max(tempfourthscore, enemyfourthfields[m].score);
-							}
-							averagefourthscore += tempfourthscore / 15;
-						}
-						*/
 						double tempfourtheva = tempfirstscore  + tempsecondscore + tempthirdscore + averagefourthscore;
 						enemymaxsumscores[i] = Math.max(enemymaxsumscores[i], (int)tempfourtheva);
 					}
@@ -200,6 +186,8 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			double[] mymaxsumscores = new double[myactionnum];
 			int[] firstscores = new int[myactionnum];
 			int[][] savedactions = myfirstfield.availableactions;
+			int[] stablecounters = new int[myactionnum];
+			int[] averagecounters = new int[myactionnum];
 			for (int i=0;i<myactionnum;i++) {
 				bnf.Calc(myfirstfields[i], true, false);
 				FieldInfo[] mysecondfields = myfirstfields[i].AvailableFields(nexnexf, nexnexs);
@@ -210,14 +198,14 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					bnf.Calc(mysecondfields[j], true, false);
 					FieldInfo[] mythirdfields = mysecondfields[j].AvailableFields(0, 0);
 					int tempsecondscore = mysecondfields[j].score;
-					double[] thirdevaluations = new double[mythirdfields.length];
-					int[] thirdscores = new int[mythirdfields.length];
 					for (int k=0;k<mythirdfields.length;k++) {
 						bnf.CalcEnemy(mythirdfields[k]);
 						int tempthirdscore = mythirdfields[k].score;
 						double thirdpossibility = mythirdfields[k].firepossibility;
 						double averagefourthscore = bnf.Tsumos(mythirdfields[k], false);
-						double tempfourtheva = tempfirstscore * 1.15  + tempsecondscore * 1.1 + tempthirdscore * 1.05 + averagefourthscore + thirdpossibility * 1.5;
+						double tempfourtheva = tempfirstscore * 1.15  + tempsecondscore * 1.1 + tempthirdscore * 1.05 + averagefourthscore * 0.5 + thirdpossibility * 1.5;
+						int temp = tempfirstscore + tempsecondscore + tempthirdscore;
+						stablecounters[i] = Math.max(stablecounters[i], temp);
 						mymaxsumscores[i] = Math.max(mymaxsumscores[i], tempfourtheva);
 					}
 				}
