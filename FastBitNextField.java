@@ -1629,4 +1629,24 @@ public class FastBitNextField {
 			return averagescore;
 		}
 	}
+	
+	public void FallDownOjama(FieldInfo field, int ojamadan) {
+		long mask = 0x0084210842108421L;
+		long ojama = mask >>> (60 - ojamadan * 5);
+		for (int i=0;i<6;i++) {
+			long filled = TopIndex((field.beforefield[i] | field.beforeojama[i])) * 5;
+			field.beforeojama[i] |= ojama << filled;
+			field.beforeojama[i] &= mask;
+		}
+		field.afterfield = Arrays.copyOf(field.beforefield, 6);
+		field.afterojama = Arrays.copyOf(field.beforeojama, 6);
+	}
+	
+	public int OjamaDiscount(FieldInfo field) {
+		int output = 0;
+		for (int i=0;i<6;i++) {
+			output += Long.bitCount(field.afterojama[i]);
+		}
+		return output * 30;
+	}
 }

@@ -82,22 +82,47 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			int[] maxsumscores = new int[myactionnum];
 			int[] firstscores = new int[myactionnum];
 			int[][] savedactions = firstfield.availableactions;
+			List<Integer> ojamalist = board.getNumbersOfOjamaList();
 			if (grace == 1) {
+				int ojamanum = ojamalist.get(0);
+				int ojamanum2 = ojamalist.get(1);
 				for (int i=0;i<myactionnum;i++) {
 					bnf.Calc(firstfields[i],  false, false);
-					maxsumscores[i] = firstfields[i].score;
+					int ojamadan = (ojamanum - firstfields[i].score / 70 + 5) / 6;
+					bnf.FallDownOjama(firstfields[i], ojamadan);
+					bnf.ThinkNextActions(firstfields[i]);
+					FieldInfo[] secondfields = firstfields[i].AvailableFields();
+					for (int j=0;j<secondfields.length;j++) {
+						bnf.Calc(secondfields[j], false, false);
+						int ojamadan2 = (ojamanum2 - secondfields[j].score / 70 + 5) / 6;
+						bnf.FallDownOjama(secondfields[j], ojamadan2);
+						bnf.ThinkNextActions(secondfields[j]);
+						FieldInfo[] thirdfields = secondfields[j].AvailableFields();
+						for (int k=0;k<thirdfields.length;k++) {
+							bnf.Calc(thirdfields[k], false, false);
+							int temp = firstfields[i].score + secondfields[j].score + thirdfields[k].score + 2000 - bnf.OjamaDiscount(thirdfields[k]);
+							maxsumscores[i] = Math.max(maxsumscores[i], temp);
+							
+						}
+					}
 				}
 			}
 			else if (grace == 2) {
+				int ojamanum = ojamalist.get(1);
 				for (int i=0;i<myactionnum;i++) {
 					bnf.Calc(firstfields[i], true, false);
-					firstscores[i] = firstfields[i].score;
 					FieldInfo[] secondfields = firstfields[i].AvailableFields(nexnexf, nexnexs);
 					for (int j=0;j<secondfields.length;j++) {
 						bnf.Calc(secondfields[j], false, false);
-						int temp = firstscores[i] + secondfields[j].score;
-						if (temp > maxsumscores[i]) {
-							maxsumscores[i] = temp;
+						// おじゃまを降らせてからのカウンターを考える
+						int ojamadan = (ojamanum - (firstfields[i].score + secondfields[j].score) / 70 + 5) / 6;
+						bnf.FallDownOjama(secondfields[j], ojamadan);
+						bnf.ThinkNextActions(secondfields[j]);
+						FieldInfo[] thirdfields = secondfields[j].AvailableFields();
+						for (int k=0;k<thirdfields.length;k++) {
+							bnf.Calc(thirdfields[k], false, false);
+							int temp = firstfields[i].score + secondfields[j].score + thirdfields[k].score + 2000 - bnf.OjamaDiscount(thirdfields[k]);
+							maxsumscores[i] = Math.max(maxsumscores[i], temp);
 						}
 					}
 				}
@@ -110,6 +135,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					selectindex = i;
 				}
 			}
+			System.out.println(maxscore);
 			if (myactionnum == 0) {
 				new ASCIIArt().DefaultFox();
 				myaction = new Action(PuyoDirection.DOWN, 0);
@@ -134,6 +160,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			int enemyactionnum = enemyfirstfields.length;
 			int[] enemymaxsumscores = new int[enemyactionnum];
 			int enemyfirstscore = 0;
+			int enemysecondscore = 0;
 			for (int i=0;i<enemyactionnum;i++) {
 				bnf.Calc(enemyfirstfields[i], true, false);
 				FieldInfo[] enemysecondfields = enemyfirstfields[i].AvailableFields(nexnexf, nexnexs);
@@ -143,6 +170,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					bnf.Calc(enemysecondfields[j], true, false);
 					FieldInfo[] enemythirdfields = enemysecondfields[j].AvailableFields(0, 0);
 					int tempsecondscore = enemysecondfields[j].score;
+					enemysecondscore = Math.max(enemysecondscore, tempsecondscore);
 					for (int k=0;k<enemythirdfields.length;k++) {
 						bnf.CalcEnemy(enemythirdfields[k]);
 						int tempthirdscore = enemythirdfields[k].score;
@@ -159,35 +187,55 @@ public class FastMeow4 extends AbstractSamplePlayer {
 				}
 			}
 			
-			int[][] columnbias = new int[4][6];
-			for (int i=0;i<3;i++)
-			{
-				columnbias[0][i] = i;
-				columnbias[0][5-i] = i;
-				columnbias[2][i] = i;
-				columnbias[2][5-i] = i;
-				columnbias[1][i] = i;
-				columnbias[1][5-i] = i;
-				columnbias[3][Math.max(0, i-1)] = i;
-				columnbias[1][Math.min(5, 5-i+1)] = i;
-			}
-			int multi = iscurpuyosame ? 2 : 1;
-			multi = isnexpuyosame ? multi * 2 : multi;
-			multi = isnexnexpuyosame ? multi * 2 : multi;
-			long start2 = System.currentTimeMillis();
-			System.out.println((start2 - start) * multi);
-			
-			
-			// 4手先まで読む
+			// 自分が確実に打てる手を見る
 			FieldInfo myfirstfield = bnf.ReadField(board);
 			bnf.Calc(myfirstfield, true, false);
 			FieldInfo[] myfirstfields = myfirstfield.AvailableFields(nexf, nexs);
 			myactionnum = myfirstfields.length;
+			int[] stablecounters = new int[myactionnum];
+			double[] averagecounters = new double[myactionnum];
+			for (int i=0;i<myactionnum;i++) {
+				bnf.Calc(myfirstfields[i], true, false);
+				FieldInfo[] mysecondfields = myfirstfields[i].AvailableFields(nexnexf, nexnexs);
+				int tempfirstscore = myfirstfields[i].score;
+				for (int j=0;j<mysecondfields.length;j++) {
+					bnf.Calc(mysecondfields[j], true, false);
+					FieldInfo[] mythirdfields = mysecondfields[j].AvailableFields(0, 0);
+					int tempsecondscore = mysecondfields[j].score;
+					for (int k=0;k<mythirdfields.length;k++) {
+						bnf.Calc(mythirdfields[k], false, false);
+						int tempthirdscore = mythirdfields[k].score;
+						int temp = tempfirstscore + tempsecondscore + tempthirdscore;
+						stablecounters[i] = Math.max(stablecounters[i], temp);
+					}
+				}
+			}
+			
+			int maxstablecounter = 0;
+			for (int i=0;i<myactionnum;i++) {
+				maxstablecounter = Math.max(maxstablecounter, stablecounters[i]);
+			}
+			
+			if (enemyfirstscore < maxstablecounter & enemysecondscore >  maxstablecounter) {
+				// 相手が2手目に大きな発火を打てそうなとき
+				// 発火点をつぶさないようにする
+				System.out.println("発火点をつぶさない手を優先します");
+				double[] tempmulti = {0, 0.5, 0.4, 0.25};
+				bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
+			}
+			else {
+				double[] tempmulti = {0, 0.5, 0.4, 0.25};
+				bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
+			}
+			// 4手先まで読む
+			myfirstfield = bnf.ReadField(board);
+			bnf.Calc(myfirstfield, true, false);
+			myfirstfields = myfirstfield.AvailableFields(nexf, nexs);
+			myactionnum = myfirstfields.length;
 			double[] mymaxsumscores = new double[myactionnum];
 			int[] firstscores = new int[myactionnum];
 			int[][] savedactions = myfirstfield.availableactions;
-			int[] stablecounters = new int[myactionnum];
-			int[] averagecounters = new int[myactionnum];
+			averagecounters = new double[myactionnum];
 			for (int i=0;i<myactionnum;i++) {
 				bnf.Calc(myfirstfields[i], true, false);
 				FieldInfo[] mysecondfields = myfirstfields[i].AvailableFields(nexnexf, nexnexs);
@@ -203,9 +251,10 @@ public class FastMeow4 extends AbstractSamplePlayer {
 						int tempthirdscore = mythirdfields[k].score;
 						double thirdpossibility = mythirdfields[k].firepossibility;
 						double averagefourthscore = bnf.Tsumos(mythirdfields[k], false);
-						double tempfourtheva = tempfirstscore * 1.15  + tempsecondscore * 1.1 + tempthirdscore * 1.05 + averagefourthscore * 0.5 + thirdpossibility * 1.5;
+						double tempfourtheva = tempfirstscore * 1.15  + tempsecondscore * 1.1 + tempthirdscore * 1.05 + averagefourthscore * 0.5 + thirdpossibility * 1.5 + 2000 - bnf.OjamaDiscount(mythirdfields[k]);
 						int temp = tempfirstscore + tempsecondscore + tempthirdscore;
 						stablecounters[i] = Math.max(stablecounters[i], temp);
+						averagecounters[i] = Math.max(averagecounters[i], temp + averagefourthscore);
 						mymaxsumscores[i] = Math.max(mymaxsumscores[i], tempfourtheva);
 					}
 				}
@@ -229,29 +278,68 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					firstmaxindex = i;
 				}
 			}
-			/*
-			System.out.println("enemy's max score is : " + enemymaxscore);
-			System.out.println("my max score is : " + maxscore);
-			System.out.println("my max score using current puyo is : " + firstmaxscore);
-			*/
+			
 
 			long end = System.currentTimeMillis();
-			System.out.println((end - start2)*multi);
-			double multi2 = isnexnexpuyosame ? multi / 12 * 22 : (double)multi / 6 * 22;
-			System.out.println((double)(end - start2) * multi2);
+			System.out.println(end - start);
 			System.out.println("--------------------------------");
-			if (firstmaxscore > enemymaxscore + 1000 && board.getTotalNumberOfOjama() < ojamathreshold) {
+
+			if (myactionnum == 0) {
+				new ASCIIArt().DefaultFox();
+				return new Action(PuyoDirection.DOWN, 0);
+			}
+			else if (firstmaxscore > enemymaxscore + 1000 && board.getTotalNumberOfOjama() < ojamathreshold) {
 				// 相手の組んでいる連鎖が小さくて速攻で倒せそうだったら
 				new ASCIIArt().ThiefFox();
 				PuyoDirection selectdirection = PuyoDirection.values()[savedactions[firstmaxindex][0]];
 				int selectcolumn = savedactions[firstmaxindex][1];
-				myaction = new Action(selectdirection, selectcolumn);
+				return  new Action(selectdirection, selectcolumn);
 			}
-			if (myactionnum == 0) {
-				new ASCIIArt().DefaultFox();
-				myaction = new Action(PuyoDirection.DOWN, 0);
+			else if (getEnemyBoard().getTotalNumberOfOjama() < 10 && enemyfirstscore > 1000) {
+				// このターンで相手に1000点以上発火される可能性があるとき
+				if (stablecounters[selectindex] > enemyfirstscore) {
+					// 確実に対処できるとき
+					// selectindexはそのままにしておく
+				}
+				else if (averagecounters[selectindex] + 1000 > enemyfirstscore) {
+					// おそらく対処できるとき
+					// この場合もselectindexはそのままにしておく
+				}
+				else {
+					// このままでは対処できなさそうなとき
+					int stablemax = 0;
+					double averagemax = 0;
+					int stablemaxindex = 0;
+					int averagemaxindex = 0;
+					for (int i=0;i<myactionnum;i++) {
+						if (stablecounters[i] > stablemax) {
+							stablemax = stablecounters[i];
+							stablemaxindex = i;
+						}
+						if (averagecounters[i] > averagemax) {
+							averagemax = averagecounters[i];
+							averagemaxindex = i;
+						}
+					}
+					if (stablemax > enemyfirstscore) {
+						// stablemaxindexに変えれば対処できるとき
+						System.out.println("相手の発火を危惧して安全策を取りました");
+						PuyoDirection selectdirection = PuyoDirection.values()[savedactions[stablemaxindex][0]];
+						int selectcolumn = savedactions[stablemaxindex][1];
+						return  new Action(selectdirection, selectcolumn);
+					}
+					else if (averagemax + 1000 > enemyfirstscore) {
+						System.out.println("相手の発火を危惧して比較的安全な策を取りました");
+						PuyoDirection selectdirection = PuyoDirection.values()[savedactions[averagemaxindex][0]];
+						int selectcolumn = savedactions[averagemaxindex][1];
+						return  new Action(selectdirection, selectcolumn);
+					}
+					else {
+						System.out.println("今発火されたらきついです…");
+					}
+				}
 			}
-			else if (myaction == null) {
+			if (myaction == null) {
 				if (firstscores[selectindex] > 0) {
 					// 発火させる決断をする直前
 					if (firstscores[selectindex] < enemymaxscore) {
