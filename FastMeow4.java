@@ -1,18 +1,12 @@
 package player;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
 
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.AbstractPlayer;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Action;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Board;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Field;
-import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.GameInfo.PlayerNumber;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoDirection;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoNumber;
@@ -44,8 +38,6 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			board.getCurrentPuyo().rotate();
 			return new Action(board.getCurrentPuyo(), 2);
 		}
-		Field field = board.getField();
-		Puyo curpuyo = board.getCurrentPuyo();
 		Puyo nexpuyo = board.getNextPuyo();
 		Puyo nexnexpuyo = board.getNextNextPuyo();
 		List<Integer> ojal = board.getNumbersOfOjamaList();
@@ -60,8 +52,6 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			grace++;
 		}
 		Action myaction = null;
-		int curf = ReadPuyoType(curpuyo.getPuyoType(PuyoNumber.FIRST));
-		int curs = ReadPuyoType(curpuyo.getPuyoType(PuyoNumber.SECOND));
 		int nexf = ReadPuyoType(nexpuyo.getPuyoType(PuyoNumber.FIRST));
 		int nexs = ReadPuyoType(nexpuyo.getPuyoType(PuyoNumber.SECOND));
 		int nexnexf = ReadPuyoType(nexnexpuyo.getPuyoType(PuyoNumber.FIRST));
@@ -77,7 +67,6 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			FieldInfo[] firstfields = firstfield.AvailableFields(nexf, nexs);
 			myactionnum = firstfields.length;
 			int[] maxsumscores = new int[myactionnum];
-			int[] firstscores = new int[myactionnum];
 			int[][] savedactions = firstfield.availableactions;
 			List<Integer> ojamalist = board.getNumbersOfOjamaList();
 			if (grace == 1) {
@@ -125,15 +114,6 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			}
 			else if (grace == 3) {
 				int ojamanum = ojamalist.get(2);
-				if (ojamalist.get(3) == 0) {
-					// 3ターン目のおじゃまを処理したらもう降ってこない場合
-					double[] tempmulti = {0, 0.5, 0.4, 0.25};
-					bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
-				}
-				else {
-					double[] tempmulti = {0, 0.3, 0, 0};
-					bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
-				}
 				FieldInfo myfirstfield = bnf.ReadField(board);
 				bnf.Calc(myfirstfield, true, false);
 				FieldInfo[] myfirstfields = myfirstfield.AvailableFields(nexf, nexs);
@@ -141,6 +121,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 				for (int i=0;i<myactionnum;i++) {
 					bnf.Calc(myfirstfields[i], true, false);
 					FieldInfo[] mysecondfields = myfirstfields[i].AvailableFields(nexnexf, nexnexs);
+					int[] maxscoresofeachtsumo = new int[15];
 					for (int j=0;j<mysecondfields.length;j++) {
 						bnf.Calc(mysecondfields[j], true, false);
 						FieldInfo[] mythirdfields = mysecondfields[j].AvailableFields(0, 0);
@@ -148,15 +129,17 @@ public class FastMeow4 extends AbstractSamplePlayer {
 							bnf.Calc(mythirdfields[k], false, false);
 							int tempthirdscore = mythirdfields[k].score;
 							int ojamadan = (ojamanum - (myfirstfields[i].score + mysecondfields[j].score + tempthirdscore) / 70 + 5) / 6;
-							bnf.FallDownOjama(mythirdfields[k], ojamadan);
-							bnf.ThinkFirePossibility(mythirdfields[k]);
-							double temp = mysecondfields[j].score + tempthirdscore + mythirdfields[k].firepossibility;		
-							if (myfirstfields[i].score > 1000) {
-								temp += myfirstfields[i].score;
-							}
-							maxsumscores[i] = Math.max(maxsumscores[i], (int)temp);
+							bnf.CalcPlacetoFire(mythirdfields[k], ojamadan);
+							int[] fourthscores = bnf.Tsumos(mythirdfields[k]);	
+							int temp = mysecondfields[j].score + tempthirdscore;		
+							bnf.CompareScores(maxscoresofeachtsumo, fourthscores, temp);
 						}
 					}
+					int sumscore = 0;
+					for (int j=0;j<15;j++) {
+						sumscore += maxscoresofeachtsumo[j];
+					}
+					maxsumscores[i] = myfirstfields[i].score + sumscore / 15;
 				}
 			}
 			int maxscore = 0;
@@ -167,9 +150,8 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					selectindex = i;
 				}
 			}
-			System.out.println(maxscore);
 			if (myactionnum == 0) {
-				new ASCIIArt().DefaultFox();
+				System.out.println("参りました");
 				myaction = new Action(PuyoDirection.DOWN, 0);
 			}
 			else if (myaction == null) {
@@ -205,7 +187,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					int tempsecondscore = enemysecondfields[j].score;
 					enemysecondscore = Math.max(enemysecondscore, tempsecondscore);
 					for (int k=0;k<enemythirdfields.length;k++) {
-						bnf.CalcEnemy(enemythirdfields[k]);
+						bnf.CalcPlacetoFire(enemythirdfields[k]);
 						int tempthirdscore = enemythirdfields[k].score;
 						int[] fourthscores = bnf.Tsumos(enemythirdfields[k]);
 						int temp = tempsecondscore + tempthirdscore;
@@ -226,55 +208,19 @@ public class FastMeow4 extends AbstractSamplePlayer {
 				}
 			}
 			
-			// 自分が確実に打てる手を見る
+			double[] tempmulti = {0, 0.5, 0.4, 0.25};
+			bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
+			
+			// 4手先まで読む
 			FieldInfo myfirstfield = bnf.ReadField(board);
 			bnf.Calc(myfirstfield, true, false);
 			FieldInfo[] myfirstfields = myfirstfield.AvailableFields(nexf, nexs);
 			myactionnum = myfirstfields.length;
-			int[] stablecounters = new int[myactionnum];
-			double[] averagecounters = new double[myactionnum];
-			for (int i=0;i<myactionnum;i++) {
-				bnf.Calc(myfirstfields[i], true, false);
-				FieldInfo[] mysecondfields = myfirstfields[i].AvailableFields(nexnexf, nexnexs);
-				int tempfirstscore = myfirstfields[i].score;
-				for (int j=0;j<mysecondfields.length;j++) {
-					bnf.Calc(mysecondfields[j], true, false);
-					FieldInfo[] mythirdfields = mysecondfields[j].AvailableFields(0, 0);
-					int tempsecondscore = mysecondfields[j].score;
-					for (int k=0;k<mythirdfields.length;k++) {
-						bnf.Calc(mythirdfields[k], false, false);
-						int tempthirdscore = mythirdfields[k].score;
-						int temp = tempfirstscore + tempsecondscore + tempthirdscore;
-						stablecounters[i] = Math.max(stablecounters[i], temp);
-					}
-				}
-			}
-			
-			int maxstablecounter = 0;
-			for (int i=0;i<myactionnum;i++) {
-				maxstablecounter = Math.max(maxstablecounter, stablecounters[i]);
-			}
-			
-			if (enemyfirstscore < maxstablecounter & enemysecondscore >  maxstablecounter) {
-				// 相手が2手目に大きな発火を打てそうなとき
-				// 発火点をつぶさないようにする
-				System.out.println("発火点をつぶさない手を優先します");
-				double[] tempmulti = {0, 0.5, 0.4, 0.25};
-				bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
-			}
-			else {
-				double[] tempmulti = {0, 0.5, 0.4, 0.25};
-				bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
-			}
-			// 4手先まで読む
-			myfirstfield = bnf.ReadField(board);
-			bnf.Calc(myfirstfield, true, false);
-			myfirstfields = myfirstfield.AvailableFields(nexf, nexs);
-			myactionnum = myfirstfields.length;
 			double[] mymaxsumscores = new double[myactionnum];
 			int[] firstscores = new int[myactionnum];
 			int[][] savedactions = myfirstfield.availableactions;
-			averagecounters = new double[myactionnum];
+			int[] stablecounters = new int[myactionnum];
+			double[] averagecounters = new double[myactionnum];
 			int blanknum = CountBlank();
 			for (int i=0;i<myactionnum;i++) {
 				bnf.Calc(myfirstfields[i], true, false);
@@ -288,7 +234,7 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					FieldInfo[] mythirdfields = mysecondfields[j].AvailableFields(0, 0);
 					int tempsecondscore = mysecondfields[j].score;
 					for (int k=0;k<mythirdfields.length;k++) {
-						bnf.CalcEnemy(mythirdfields[k]);
+						bnf.CalcPlacetoFire(mythirdfields[k]);
 						int tempthirdscore = mythirdfields[k].score;
 						double thirdpossibility = mythirdfields[k].firepossibility;
 						int[] fourthscores = bnf.Tsumos(mythirdfields[k]);		
@@ -300,11 +246,10 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					}
 				}
 				for (int j=0;j<15;j++) {
-					// mymaxsumscores[i] += maxscoresofeachtsumo[j];
 					averagecounters[i] += maxscoresofeachtsumost[j];
 				}
 				averagecounters[i] = tempfirstscore + averagecounters[i] / 15;
-				if (blanknum > 50) {
+				if (blanknum > 40) {
 					Arrays.sort(maxscoresofeachtsumo);
 					mymaxsumscores[i] = tempfirstscore * 2.3 + maxscoresofeachtsumo[14];
 				}
@@ -315,13 +260,6 @@ public class FastMeow4 extends AbstractSamplePlayer {
 					mymaxsumscores[i] = tempfirstscore * 2.3 + mymaxsumscores[i] / 15;
 				}
 			}
-			int mypotential = new FirePossibility().Calc(field);
-			// int enemypoint = new FirePossibility().Calc(getEnemyBoard().getField());
-
-			System.out.println(Arrays.toString(stablecounters));
-			System.out.println(Arrays.toString(averagecounters));
-			System.out.println(Arrays.toString(mymaxsumscores));
-			
 			double maxscore = 0;
 			int selectindex = 0;
 			int firstmaxscore = 0;
@@ -343,12 +281,12 @@ public class FastMeow4 extends AbstractSamplePlayer {
 			System.out.println("--------------------------------");
 
 			if (myactionnum == 0) {
-				new ASCIIArt().DefaultFox();
+				System.out.println("参りました");
 				return new Action(PuyoDirection.DOWN, 0);
 			}
 			else if (firstmaxscore > enemymaxscore + 1000 && board.getTotalNumberOfOjama() < ojamathreshold) {
 				// 相手の組んでいる連鎖が小さくて速攻で倒せそうだったら
-				new ASCIIArt().ThiefFox();
+				System.out.println("速攻を仕掛けます");
 				PuyoDirection selectdirection = PuyoDirection.values()[savedactions[firstmaxindex][0]];
 				int selectcolumn = savedactions[firstmaxindex][1];
 				return  new Action(selectdirection, selectcolumn);

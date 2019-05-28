@@ -1,16 +1,10 @@
 package player;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.function.BiFunction;
 
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Board;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Field;
-import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.PlayerInfo;
-import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo;
-import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoDirection;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.game.Puyo.PuyoNumber;
 import jp.ac.nagoya_u.is.ss.kishii.usui.system.storage.PuyoType;
 
@@ -960,7 +954,7 @@ public class FastBitNextField {
 		return output;
 	}
 	
-	public void ThinkEnemyFirePossibility(FieldInfo field) {
+	public void ThinkFirePossibilitywithPlacetoFire(FieldInfo field) {
 		// 表面にあるぷよをそれぞれ消してみて、どれくらいの点数になるかを見る
 		// まず各列の最初のビットを取り出す
 		long a = field.afterfield[0];
@@ -1463,7 +1457,7 @@ public class FastBitNextField {
 		field.placetofire2 = placetofire2;
 	}
 	
-	public void CalcEnemy(FieldInfo field) {
+	public void CalcPlacetoFire(FieldInfo field) {
 		while (CalcNext(field)) {
 		}
 		long gotta = 0;
@@ -1475,8 +1469,23 @@ public class FastBitNextField {
 		}
 		field.afterfield = Arrays.copyOf(field.beforefield, field.beforefield.length);
 		field.afterojama = Arrays.copyOf(field.beforeojama, field.beforeojama.length);
-		ThinkEnemyFirePossibility(field);
+		ThinkFirePossibilitywithPlacetoFire(field);
 	}
+	
+	public void CalcPlacetoFire(FieldInfo field, int ojamadan) {
+		while (CalcNext(field)) {
+		}
+		long gotta = 0;
+		for (int i=0;i<6;i++) {
+			gotta |= field.beforefield[i] | field.beforeojama[i];
+		}
+		if (gotta == 0) {
+			field.score += 2100;
+		}
+		FallDownOjama(field, ojamadan);
+		ThinkFirePossibilitywithPlacetoFire(field);
+	}
+	
 	
 	public int TsumotoTsumoIndex(int firstpuyo, int secondpuyo) {
 		// firstpuyo, secondpuyo は0からはじまる
