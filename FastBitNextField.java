@@ -1472,7 +1472,7 @@ public class FastBitNextField {
 		ThinkFirePossibilitywithPlacetoFire(field);
 	}
 	
-	public void CalcPlacetoFire(FieldInfo field, int ojamadan) {
+	public void CalcPlacetoFire(FieldInfo field, int ojamanum, int befscore) {
 		while (CalcNext(field)) {
 		}
 		long gotta = 0;
@@ -1482,6 +1482,7 @@ public class FastBitNextField {
 		if (gotta == 0) {
 			field.score += 2100;
 		}
+		int ojamadan = (ojamanum - (befscore + field.score) / 70 + 5) / 6;
 		FallDownOjama(field, ojamadan);
 		ThinkFirePossibilitywithPlacetoFire(field);
 	}
@@ -1619,6 +1620,91 @@ public class FastBitNextField {
 							 FieldInfo tempf = new FieldInfo(field, i, k, j, j, tops, true);
 							 Calc(tempf, false, false);
 							 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score);
+							 alreadythought[actionindex[1]] = true;
+						}
+					}
+				}
+			}
+		}
+		return maxscores;
+	}
+	
+	public int[] TsumoswithOjamaDiscount(FieldInfo field){
+		boolean[] alreadythought = new boolean[275];
+		int[] maxscores = new int[15];
+		int[] tops = new int[6];
+		for (int i=0;i<6;i++) {
+			tops[i] = TopIndex(field.afterfield[i]) * 5;
+		}
+		
+		for (int i=0;i<5;i++) {
+			for (int j=0;j<6;j++) {
+				if (field.placetofire2[i][j]) {
+					if (j > 0) {
+						int[] actionindex = ActiontoActionIndex(i, i, j, j-1, false);
+						if (!alreadythought[actionindex[1]]) {
+							 FieldInfo tempf = new FieldInfo(field, i, i, j, j-1, tops, false);
+							 Calc(tempf, false, false);
+							 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+							 alreadythought[actionindex[1]] = true;
+						}
+					}
+					if (j < 5) {
+						int[] actionindex = ActiontoActionIndex(i, i, j, j+1, false);
+						if (!alreadythought[actionindex[1]]) {
+							 FieldInfo tempf = new FieldInfo(field, i, i, j, j+1, tops, false);
+							 Calc(tempf, false, false);
+							 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+							 alreadythought[actionindex[1]] = true;
+						}
+					}
+					int[] actionindex = ActiontoActionIndex(i, i, j, j, false);
+					if (!alreadythought[actionindex[1]]) {
+						 FieldInfo tempf = new FieldInfo(field, i, i, j, j, tops, false);
+						 Calc(tempf, false, false);
+						 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+						 alreadythought[actionindex[1]] = true;
+					}
+					actionindex = ActiontoActionIndex(i, i, j, j, true);
+					if (!alreadythought[actionindex[1]]) {
+						 FieldInfo tempf = new FieldInfo(field, i, i, j, j, tops, true);
+						 Calc(tempf, false, false);
+						 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+						 alreadythought[actionindex[1]] = true;
+					}
+				}
+				if (field.placetofire1[i][j]) {
+					for (int k=0;k<5;k++) {
+						if (j > 0) {
+							int[] actionindex = ActiontoActionIndex(i, k, j, j-1, false);
+							if (!alreadythought[actionindex[1]]) {
+								 FieldInfo tempf = new FieldInfo(field, i, k, j, j-1, tops, false);
+								 Calc(tempf, false, false);
+								 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+								 alreadythought[actionindex[1]] = true;
+							}
+						}
+						if (j < 5) {
+							int[] actionindex = ActiontoActionIndex(i, k, j, j+1, false);
+							if (!alreadythought[actionindex[1]]) {
+								 FieldInfo tempf = new FieldInfo(field, i, k, j, j+1, tops, false);
+								 Calc(tempf, false, false);
+								 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+								 alreadythought[actionindex[1]] = true;
+							}
+						}
+						int[] actionindex = ActiontoActionIndex(i, k, j, j, false);
+						if (!alreadythought[actionindex[1]]) {
+							 FieldInfo tempf = new FieldInfo(field, i, k, j, j, tops, false);
+							 Calc(tempf, false, false);
+							 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
+							 alreadythought[actionindex[1]] = true;
+						}
+						actionindex = ActiontoActionIndex(i, k, j, j, true);
+						if (!alreadythought[actionindex[1]]) {
+							 FieldInfo tempf = new FieldInfo(field, i, k, j, j, tops, true);
+							 Calc(tempf, false, false);
+							 maxscores[actionindex[0]] = Math.max(maxscores[actionindex[0]], tempf.score + 2000 - OjamaDiscount(tempf));
 							 alreadythought[actionindex[1]] = true;
 						}
 					}
