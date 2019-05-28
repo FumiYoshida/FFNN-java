@@ -1534,7 +1534,7 @@ public class FastBitNextField {
 		return output;
 	}
 	
-	public double Tsumos(FieldInfo field, boolean isenemy){
+	public int[] Tsumos(FieldInfo field){
 		boolean[] alreadythought = new boolean[275];
 		int[] maxscores = new int[15];
 		int[] tops = new int[6];
@@ -1616,17 +1616,12 @@ public class FastBitNextField {
 				}
 			}
 		}
-		if (isenemy) {
-			Arrays.sort(maxscores);
-			return maxscores[7];
-		}
-		else {
-			double averagescore = 0;
-			for (int i=0;i<15;i++) {
-				averagescore += maxscores[i];
-			}
-			averagescore /= 15;
-			return averagescore;
+		return maxscores;
+	}
+	
+	public void CompareScores(int[] maxscoreforeachtsumo, int[] maxscoresofthismove, int scoreofthismove) {
+		for (int i=0;i<15;i++) {
+			maxscoreforeachtsumo[i] = Math.max(maxscoreforeachtsumo[i], maxscoresofthismove[i] + scoreofthismove);
 		}
 	}
 	
