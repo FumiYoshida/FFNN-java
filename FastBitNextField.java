@@ -657,7 +657,7 @@ public class FastBitNextField {
 		while (asurface != 0) {
 			// 表面のぷよの位置を一つ取り出す
 			long erasea = asurface & (-asurface);
-			
+
 			// つながっているのが最大３ぷよなので、周囲25マスを見る
 			erasea |= ((erasea >>> 5) & aue) | ((erasea & aue) << 5); // 一つ上と一つ下を見る
 			erasea |= ((erasea >>> 5) & aue) | ((erasea & aue) << 5); // 二つ上から二つ下までを見る
@@ -665,17 +665,20 @@ public class FastBitNextField {
 			long erasec = eraseb & bmigi;
 			// 発火に必要なぷよの数を調べる
 			int tempnumtofire = 4 - Long.bitCount(erasea) - Long.bitCount(eraseb) - Long.bitCount(erasec);  
-
+			
 			// おじゃまを消す
-			erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb);
+			long eraseojamaa = savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb);
+			erasea |= eraseojamaa;
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
 			
 			// 既に消したところは、今後消してみる位置のリストから外す
 			asurface ^= asurface & erasea;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
-			
+
 			// ぷよを落とす
 			long[] as = FallDownPuyo(savedfield[0], savedojama[0], erasea);
 			long[] bs = FallDownPuyo(savedfield[1], savedojama[1], eraseb);
@@ -683,7 +686,6 @@ public class FastBitNextField {
 			long[] ds = {savedfield[3], savedojama[3]};
 			long[] es = {savedfield[4], savedojama[4]};
 			long[] fs = {savedfield[5], savedojama[5]};
-			
 			// 連鎖を計算する
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
 			Calc(tempfi, false, false);
@@ -701,10 +703,14 @@ public class FastBitNextField {
 			long erasec = eraseb & bmigi;
 			long erased = erasec & cmigi;
 			int tempnumtofire = 4 - Long.bitCount(erasea) - Long.bitCount(eraseb) - Long.bitCount(erasec) - Long.bitCount(erased);  
-			erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec);
+			long eraseojamaa = savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec);
+			erasea |= eraseojamaa;
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
 			asurface ^= asurface & erasea;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
@@ -731,12 +737,18 @@ public class FastBitNextField {
 			long erasea = eraseb & amigi;
 			long erased = erasec & cmigi;
 			long erasee = erased & dmigi;
+			
 			int tempnumtofire = 4 - Long.bitCount(erasea) - Long.bitCount(eraseb) - Long.bitCount(erasec) - Long.bitCount(erased) - Long.bitCount(erasee);  
-			erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased);
+			long eraseojamaa = savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			long eraseojamae= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased);
+			erasea |= eraseojamaa;
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
 			asurface ^= asurface & erasea;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
@@ -765,11 +777,16 @@ public class FastBitNextField {
 			long erasee = erased & dmigi;
 			long erasef = erasee & emigi;
 			int tempnumtofire = 4 - Long.bitCount(eraseb) - Long.bitCount(erasec) - Long.bitCount(erased) - Long.bitCount(erasee) - Long.bitCount(erasef); 
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
-			erasef |= savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			long eraseojamae = savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			long eraseojamaf = savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
+			erasef |= eraseojamaf;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
 			dsurface ^= dsurface & erased;
@@ -797,10 +814,14 @@ public class FastBitNextField {
 			long erasec = erased & cmigi;
 			long erasef = erasee & emigi;
 			int tempnumtofire = 4 - Long.bitCount(erasec) - Long.bitCount(erased) - Long.bitCount(erasee) - Long.bitCount(erasef); 
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
-			erasef |= savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			long eraseojamae = savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			long eraseojamaf = savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
+			erasef |= eraseojamaf;
 			csurface ^= csurface & erasec;
 			dsurface ^= dsurface & erased;
 			esurface ^= esurface & erasee;
@@ -826,9 +847,12 @@ public class FastBitNextField {
 			long erasee = erasef & emigi;
 			long erased = erasee & dmigi;		
 			int tempnumtofire = 4 - Long.bitCount(erased) - Long.bitCount(erasee) - Long.bitCount(erasef); 
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
-			erasef |= savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasee);
+			long eraseojamae = savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			long eraseojamaf = savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
+			erasef |= eraseojamaf;
 			dsurface ^= dsurface & erased;
 			esurface ^= esurface & erasee;
 			fsurface ^= fsurface & erasef;
@@ -989,6 +1013,12 @@ public class FastBitNextField {
 		long dsurface = (dfilled & ((cfilled ^ dfilled) | (dfilled ^ efilled))) | (d > ojamad ? ((long)1 << (TopIndex(d) * 5)) : 0);
 		long esurface = (efilled & ((dfilled ^ efilled) | (efilled ^ ffilled))) | (e > ojamae ? ((long)1 << (TopIndex(e) * 5)) : 0);
 		long fsurface = (ffilled & (efilled ^ ffilled)) | (f > ojamaf ? ((long)1 << (TopIndex(f) * 5)) : 0);
+		asurface ^= ojamaa;
+		bsurface ^= ojamab;
+		csurface ^= ojamac;
+		dsurface ^= ojamad;
+		esurface ^= ojamae;
+		fsurface ^= ojamaf;
 		
 		// 後でつながっているぷよを消すために、どこがつながっているかを見る
 		long am = a & b;
@@ -1070,9 +1100,12 @@ public class FastBitNextField {
 			boolean cfire = erasec != 0;
 			
 			// おじゃまを消す
-			erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb);
+			long eraseojamaa = savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb);
+			erasea |= eraseojamaa;
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
 			
 			// 既に消したところは、今後消してみる位置のリストから外す
 			asurface ^= asurface & erasea;
@@ -1133,10 +1166,14 @@ public class FastBitNextField {
 			boolean cfire = erasec != 0;
 			boolean dfire = erased != 0;
 			int tempnumtofire = 4 - Long.bitCount(erasea) - Long.bitCount(eraseb) - Long.bitCount(erasec) - Long.bitCount(erased);  
-			erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec);
+			long eraseojamaa = savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec);
+			erasea |= eraseojamaa;
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
 			asurface ^= asurface & erasea;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
@@ -1200,11 +1237,16 @@ public class FastBitNextField {
 			boolean efire = erasee != 0;
 			
 			int tempnumtofire = 4 - Long.bitCount(erasea) - Long.bitCount(eraseb) - Long.bitCount(erasec) - Long.bitCount(erased) - Long.bitCount(erasee);  
-			erasea |= savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased);
+			long eraseojamaa = savedojama[0] & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			long eraseojamae= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased);
+			erasea |= eraseojamaa;
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
 			asurface ^= asurface & erasea;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
@@ -1274,11 +1316,16 @@ public class FastBitNextField {
 			boolean efire = erasee != 0;
 			boolean ffire = erasef != 0;
 			int tempnumtofire = 4 - Long.bitCount(eraseb) - Long.bitCount(erasec) - Long.bitCount(erased) - Long.bitCount(erasee) - Long.bitCount(erasef); 
-			eraseb |= savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasec);
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
-			erasef |= savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			long eraseojamab = savedojama[1] & ((eraseb << 5) | (eraseb >>> 5) | erasec);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			long eraseojamae = savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			long eraseojamaf = savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			eraseb |= eraseojamab;
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
+			erasef |= eraseojamaf;
 			bsurface ^= bsurface & eraseb;
 			csurface ^= csurface & erasec;
 			dsurface ^= dsurface & erased;
@@ -1347,10 +1394,14 @@ public class FastBitNextField {
 			boolean dfire = erased != 0;
 			boolean ffire = erasef != 0;
 			int tempnumtofire = 4 - Long.bitCount(erasec) - Long.bitCount(erased) - Long.bitCount(erasee) - Long.bitCount(erasef); 
-			erasec |= savedojama[2] & ((erasec << 5) | (erasec >>> 5) | erased);
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
-			erasef |= savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			long eraseojamac = savedojama[2] & ((erasec << 5) | (erasec >>> 5) | erased);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			long eraseojamae = savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			long eraseojamaf = savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			erasec |= eraseojamac;
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
+			erasef |= eraseojamaf;
 			csurface ^= csurface & erasec;
 			dsurface ^= dsurface & erased;
 			esurface ^= esurface & erasee;
@@ -1409,9 +1460,12 @@ public class FastBitNextField {
 			boolean dfire = erased != 0;
 			boolean efire = erasee != 0;
 			int tempnumtofire = 4 - Long.bitCount(erased) - Long.bitCount(erasee) - Long.bitCount(erasef); 
-			erased |= savedojama[3] & ((erased << 5) | (erased >>> 5) | erasee);
-			erasee |= savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
-			erasef |= savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			long eraseojamad = savedojama[3] & ((erased << 5) | (erased >>> 5) | erasee);
+			long eraseojamae = savedojama[4] & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			long eraseojamaf = savedojama[5] & ((erasef << 5) | (erasef >>> 5) | erasee);
+			erased |= eraseojamad;
+			erasee |= eraseojamae;
+			erasef |= eraseojamaf;
 			dsurface ^= dsurface & erased;
 			esurface ^= esurface & erasee;
 			fsurface ^= fsurface & erasef;
@@ -1452,7 +1506,7 @@ public class FastBitNextField {
 				}
 			}
 		}
-		field.firepossibility = maxfirepossibility + connectnum;
+		field.firepossibility = maxfirepossibility + connectnum * 5;
 		field.placetofire1 = placetofire1;
 		field.placetofire2 = placetofire2;
 	}
