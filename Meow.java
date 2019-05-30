@@ -44,6 +44,7 @@ public class Meow extends AbstractSamplePlayer {
 		int grace = 1;
 		int scorethreshold = 1000;
 		int ojamathreshold = 4;
+		int ojamathreshold2 = 0;
 		for (int oja : ojal) {
 			if (oja > 0) {
 				break;
@@ -69,8 +70,9 @@ public class Meow extends AbstractSamplePlayer {
 			int[][] savedactions = firstfield.availableactions;
 			List<Integer> ojamalist = board.getNumbersOfOjamaList();
 			if (grace == 1) {
+				// このターン終了時におじゃまが降ってくるとき
 				boolean needtofire = true;
-				if (CountBlank() > 30 && board.getTotalNumberOfOjama() < 12) {
+				if (CountBlank() > 30 && board.getTotalNumberOfOjama() <= ojamathreshold2) {
 					needtofire = false;
 				}
 				int ojamanum = ojamalist.get(0);
@@ -117,8 +119,9 @@ public class Meow extends AbstractSamplePlayer {
 				}
 			}
 			else if (grace == 2) {
+				// 次のターン終了時におじゃまが降ってくるとき
 				boolean needtofire = true;
-				if (CountBlank() > 30 && board.getTotalNumberOfOjama() < 12) {
+				if (CountBlank() > 30 && board.getTotalNumberOfOjama() <= ojamathreshold2) {
 					needtofire = false;
 				}
 				int ojamanum2 = ojamalist.get(1);
@@ -157,8 +160,9 @@ public class Meow extends AbstractSamplePlayer {
 				}
 			}
 			else if (grace == 3) {
+				// 次の次のターン終了時（ネクネクまで使ったとき）におじゃまが降ってくるとき
 				boolean needtofire = true;
-				if (CountBlank() > 30 && board.getTotalNumberOfOjama() < 12) {
+				if (CountBlank() > 30 && board.getTotalNumberOfOjama() <= ojamathreshold2) {
 					needtofire = false;
 				}
 				int ojamanum = ojamalist.get(2);
@@ -260,8 +264,8 @@ public class Meow extends AbstractSamplePlayer {
 					enemymaxscore = enemymaxsumscores[i];
 				}
 			}
-			double blank = CountBlank() * 0.025;
-			double[] tempmulti = {0, 0.5 * blank, 0.4 * blank, 0.25 * blank};
+			// double blank = CountBlank() * 0.025 * 0.5 + 0.5;
+			double[] tempmulti = {0, 0.5, 0.4, 0.25};
 			bnf.firepossibilityevaluator = (firepos, numtof) -> firepos * tempmulti[numtof];
 			
 			// 4手先まで読む
@@ -271,6 +275,7 @@ public class Meow extends AbstractSamplePlayer {
 			myactionnum = myfirstfields.length;
 			double[] mymaxsumscores = new double[myactionnum];
 			int[] firstscores = new int[myactionnum];
+			int[] secondscores = new int[myactionnum];
 			int[][] savedactions = myfirstfield.availableactions;
 			int[] stablecounters = new int[myactionnum];
 			double[] averagecounters = new double[myactionnum];
@@ -286,6 +291,7 @@ public class Meow extends AbstractSamplePlayer {
 					bnf.Calc(mysecondfields[j], true, false);
 					FieldInfo[] mythirdfields = mysecondfields[j].AvailableFields(0, 0);
 					int tempsecondscore = mysecondfields[j].score;
+					secondscores[i] = Math.max(secondscores[i], tempfirstscore + tempsecondscore);
 					for (int k=0;k<mythirdfields.length;k++) {
 						bnf.CalcPlacetoFire(mythirdfields[k]);
 						int tempthirdscore = mythirdfields[k].score;
@@ -298,14 +304,8 @@ public class Meow extends AbstractSamplePlayer {
 						stablecounters[i] = Math.max(stablecounters[i], tempfirstscore + tempst);
 					}
 				}
-				int tempdiscount = 0;
 				for (int j=0;j<15;j++) {
 					averagecounters[i] += maxscoresofeachtsumost[j];
-					/*
-					if (maxscoresofeachtsumost[j] + tempfirstscore < enemyfirstscore) {
-						tempdiscount += 300;
-					}
-					*/
 				}
 				averagecounters[i] = tempfirstscore + averagecounters[i] / 15;
 				if (blanknum > 40) {
@@ -316,13 +316,15 @@ public class Meow extends AbstractSamplePlayer {
 					for (int j=0;j<15;j++) {
 						mymaxsumscores[i] += maxscoresofeachtsumo[j];
 					}
-					mymaxsumscores[i] = tempfirstscore * 2.3 + mymaxsumscores[i] / 15 - tempdiscount;
+					mymaxsumscores[i] = tempfirstscore * 2.3 + mymaxsumscores[i] / 15;
 				}
 			}
 			double maxscore = 0;
 			int selectindex = 0;
 			int firstmaxscore = 0;
 			int firstmaxindex = 0;
+			int secondmaxscore = 0;
+			int secondmaxindex = 0;
 			for (int i=0;i<myactionnum;i++) {
 				if (mymaxsumscores[i] > maxscore) {
 					maxscore = mymaxsumscores[i];
@@ -332,22 +334,38 @@ public class Meow extends AbstractSamplePlayer {
 					firstmaxscore = firstscores[i];
 					firstmaxindex = i;
 				}
+				if (secondscores[i] > secondmaxscore) {
+					secondmaxscore = secondscores[i];
+					secondmaxindex = i;
+				}
 			}
 			
 
 			long end = System.currentTimeMillis();
 			System.out.println(end - start);
 			System.out.println("--------------------------------");
-
+			if (EnemyOjama() > 24) {
+				scorethreshold -= 800;
+			}
+			
 			if (myactionnum == 0) {
 				System.out.println("参りました");
 				return new Action(PuyoDirection.DOWN, 0);
 			}
-			else if (firstmaxscore > Math.max(0, enemymaxscore - getEnemyBoard().getTotalNumberOfOjama())+ 1000 && board.getTotalNumberOfOjama() < ojamathreshold) {
+			else if (firstmaxscore > Math.max(0, enemymaxscore - getEnemyBoard().getTotalNumberOfOjama())+ scorethreshold && board.getTotalNumberOfOjama() < ojamathreshold) {
 				// 相手の組んでいる連鎖が小さくて速攻で倒せそうだったら
 				System.out.println("速攻を仕掛けます");
 				PuyoDirection selectdirection = PuyoDirection.values()[savedactions[firstmaxindex][0]];
 				int selectcolumn = savedactions[firstmaxindex][1];
+				return  new Action(selectdirection, selectcolumn);
+			}
+			else if (secondmaxscore > Math.max(0, enemymaxscore - getEnemyBoard().getTotalNumberOfOjama())+ scorethreshold + 1000 && board.getTotalNumberOfOjama() < ojamathreshold) {
+				// 次に速攻をする条件を満たせる可能性が高かったら
+				if (secondmaxindex != selectindex) {
+					System.out.println("速攻のための準備をします");
+				}
+				PuyoDirection selectdirection = PuyoDirection.values()[savedactions[secondmaxindex][0]];
+				int selectcolumn = savedactions[secondmaxindex][1];
 				return  new Action(selectdirection, selectcolumn);
 			}
 			else if (getEnemyBoard().getTotalNumberOfOjama() < 10 && enemyfirstscore > 1000) {
@@ -697,6 +715,19 @@ public class Meow extends AbstractSamplePlayer {
 	        quicksort(a, index, left, i - 1);  /* 分割した左を再帰的にソート */
 	        quicksort(a, index, j + 1, right); /* 分割した右を再帰的にソート */
 	    }
+	}
+	
+	public int EnemyOjama() {
+		int output = 0;
+		Field ef = getEnemyBoard().getField();
+		for (int i=0;i<6;i++) {
+			for (int j=0;j<12;j++) {
+				if (ef.getPuyoType(i, j) == PuyoType.OJAMA_PUYO) {
+					output++;
+				}
+			}
+		}
+		return output;
 	}
 	
 	/**

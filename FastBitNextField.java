@@ -1,3 +1,4 @@
+
 package player;
 
 import java.util.Arrays;
@@ -13,6 +14,7 @@ public class FastBitNextField {
 	public BiFunction<Integer, Integer, Double> firepossibilityevaluator;
 	public double firepossibilityevaluation;
 	public int[][][] scoretable;
+	public int[][][] scoretablewithoutdb;
 	public int[] topindextable;
 	public int[][][][][][][][][] availableactionstable; // 大きさ(3*3*3*3*3*3*(0~11)*2, 3*3*3*3*3*3*(0~22)*2) = 48114(以下) (puyoをrotateさせる回数、置く場所)の組
 	public int[][][][][][][][][] availableputplacestable; // （firstpuyoを置く場所、secondpuyoを置く場所）の組が入っている
@@ -24,6 +26,7 @@ public class FastBitNextField {
 		// まず得点を近似するテーブルの初期化も行っておく
 		int[] tempbairitsutable = {0, 0, 8, 16, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480, 512};
 		scoretable = new int[20][72][5];
+		scoretablewithoutdb = new int[20][72][5];
 		for (int erasenum=4;erasenum<72;erasenum++) {
 			double tempb1 = erasenum - 3; // 消したのが1色だけの場合
 			if (erasenum == 4) {
@@ -49,6 +52,9 @@ public class FastBitNextField {
 				scoretable[i][erasenum] = tempsc;
 				if (scoretable[i][erasenum][0] == 0) {
 					scoretable[i][erasenum][0] = 40;
+				}
+				for (int j=0;j<5;j++) {
+					scoretablewithoutdb[i][erasenum][j] = Math.max(1, tempbairitsutable[i]) * 40;
 				}
 			}
 		}
@@ -250,6 +256,252 @@ public class FastBitNextField {
 			default:
 				return 0;
 			}
+		}
+	}
+	
+	public boolean CalcNextWithoutDouzikeshiBonus(FieldInfo field) {
+		// まず周囲4つとつながっているかを見る
+		long a = field.beforefield[0];
+		long b = field.beforefield[1];
+		long c = field.beforefield[2];
+		long d = field.beforefield[3];
+		long e = field.beforefield[4];
+		long f = field.beforefield[5];
+		long ojamaa = field.beforeojama[0];
+		long ojamab = field.beforeojama[1];
+		long ojamac = field.beforeojama[2];
+		long ojamad = field.beforeojama[3];
+		long ojamae = field.beforeojama[4];
+		long ojamaf = field.beforeojama[5];
+		
+		long am = a & b;
+		long bm = b & c;
+		long cm = c & d;
+		long dm = d & e;
+		long em = e & f;
+		long au = a & (a >>> 5);
+		long bu = b & (b >>> 5);
+		long cu = c & (c >>> 5);
+		long du = d & (d >>> 5);
+		long eu = e & (e >>> 5);
+		long fu = f & (f >>> 5);
+		long mask = 37191016277640225L; // 最初と、そこから5ビットごとに1が立っている　61ビット目は例外的に0
+		
+		long tempam = am | (am >>> 1) | (am >>> 2);
+		long amigi = (tempam | (tempam >>> 2)) & mask;
+		long tempau = au | (au >>> 1) | (au >>> 2);
+		long aue = (tempau | (tempau >>> 2)) & mask;
+		long tempbm = bm | (bm >>> 1) | (bm >>> 2);
+		long bmigi = (tempbm | (tempbm >>> 2)) & mask;
+		long tempbu = bu | (bu >>> 1) | (bu >>> 2);
+		long bue = (tempbu | (tempbu >>> 2)) & mask;
+		long tempcm = cm | (cm >>> 1) | (cm >>> 2);
+		long cmigi = (tempcm | (tempcm >>> 2)) & mask;
+		long tempcu = cu | (cu >>> 1) | (cu >>> 2);
+		long cue = (tempcu | (tempcu >>> 2)) & mask;
+		long tempdm = dm | (dm >>> 1) | (dm >>> 2);
+		long dmigi = (tempdm | (tempdm >>> 2)) & mask;
+		long tempdu = du | (du >>> 1) | (du >>> 2);
+		long due = (tempdu | (tempdu >>> 2)) & mask;
+		long tempem = em | (em >>> 1) | (em >>> 2);
+		long emigi = (tempem | (tempem >>> 2)) & mask;
+		long tempeu = eu | (eu >>> 1) | (eu >>> 2);
+		long eue = (tempeu | (tempeu >>> 2)) & mask;
+		long tempfu = fu | (fu >>> 1) | (fu >>> 2);
+		long fue = (tempfu | (tempfu >>> 2)) & mask;
+		
+		// 次に、4つつながっている場所を探す。
+		// 5種類すべてのテトラミノは、ドミノの周囲6か所の内2か所に
+		// 正方形がつながっている形で表せるので、この条件を満たすドミノをまず見つける。
+		
+		long tempamigi = amigi + (amigi >>> 5);
+		long tempbmigi = bmigi + (bmigi >>> 5);
+		long tempcmigi = cmigi + (cmigi >>> 5);
+		long tempdmigi = dmigi + (dmigi >>> 5);
+		long tempemigi = emigi + (emigi >>> 5);
+
+		long atatedomino = (aue << 5) + (aue >>> 5) + tempamigi;
+		long btatedomino = (bue << 5) + (bue >>> 5) + tempamigi + tempbmigi;
+		long ctatedomino = (cue << 5) + (cue >>> 5) + tempbmigi + tempcmigi;
+		long dtatedomino = (due << 5) + (due >>> 5) + tempcmigi + tempdmigi;
+		long etatedomino = (eue << 5) + (eue >>> 5) + tempdmigi + tempemigi;
+		long ftatedomino = (fue << 5) + (fue >>> 5) + tempemigi;
+		
+		atatedomino = ((atatedomino >>> 1) | (atatedomino >>> 2)) & aue;
+		btatedomino = ((btatedomino >>> 1) | (btatedomino >>> 2)) & bue;
+		ctatedomino = ((ctatedomino >>> 1) | (ctatedomino >>> 2)) & cue;
+		dtatedomino = ((dtatedomino >>> 1) | (dtatedomino >>> 2)) & due;
+		etatedomino = ((etatedomino >>> 1) | (etatedomino >>> 2)) & eue;
+		ftatedomino = ((ftatedomino >>> 1) | (ftatedomino >>> 2)) & fue;
+		
+		long tempaue = aue + (aue << 5);
+		long tempbue = bue + (bue << 5);
+		long tempcue = cue + (cue << 5);
+		long tempdue = due + (due << 5);
+		long tempeue = eue + (eue << 5);
+		long tempfue = fue + (fue << 5);
+		
+		long ayokodomino = bmigi + tempaue + tempbue;
+		long byokodomino = amigi + cmigi + tempbue + tempcue;
+		long cyokodomino = bmigi + dmigi + tempcue + tempdue;
+		long dyokodomino = cmigi + emigi + tempdue + tempeue;
+		long eyokodomino = dmigi + tempeue + tempfue;
+		
+		ayokodomino = ((ayokodomino >>> 1) | (ayokodomino >>> 2)) & amigi;
+		byokodomino = ((byokodomino >>> 1) | (byokodomino >>> 2)) & bmigi;
+		cyokodomino = ((cyokodomino >>> 1) | (cyokodomino >>> 2)) & cmigi;
+		dyokodomino = ((dyokodomino >>> 1) | (dyokodomino >>> 2)) & dmigi;
+		eyokodomino = ((eyokodomino >>> 1) | (eyokodomino >>> 2)) & emigi;
+		
+		// テトラミノ中のドミノを見つけたところで、そこを消える場所として記録する
+		
+		long erasea = atatedomino | (atatedomino << 5) | ayokodomino;
+		long eraseb = btatedomino | (btatedomino << 5) | ayokodomino | byokodomino;	
+		long erasec = ctatedomino | (ctatedomino << 5) | byokodomino | cyokodomino;
+		long erased = dtatedomino | (dtatedomino << 5) | cyokodomino | dyokodomino;
+		long erasee = etatedomino | (etatedomino << 5) | dyokodomino | eyokodomino;
+		long erasef = ftatedomino | (ftatedomino << 5) | eyokodomino;
+
+		// 消える場所とつながっている場所を消える場所として記録する
+		
+		erasea |= ((erasea >>> 5) & aue) | ((erasea & aue) << 5) | (eraseb & amigi);
+		eraseb |= ((eraseb >>> 5) & bue) | ((eraseb & bue) << 5) | (erasea & amigi) | (erasec & bmigi);
+		erasec |= ((erasec >>> 5) & cue) | ((erasec & cue) << 5) | (eraseb & bmigi) | (erased & cmigi);
+		erased |= ((erased >>> 5) & due) | ((erased & due) << 5) | (erasec & cmigi) | (erasee & dmigi);
+		erasee |= ((erasee >>> 5) & eue) | ((erasee & eue) << 5) | (erased & dmigi) | (erasef & emigi);
+		erasef |= ((erasef >>> 5) & fue) | ((erasef & fue) << 5) | (erasee & emigi);
+		
+		// erasea~fをいじる前に得点を計算しておく
+		int erasenum = Long.bitCount(erasea) + Long.bitCount(eraseb) + Long.bitCount(erasec) + Long.bitCount(erased) + Long.bitCount(erasee) + Long.bitCount(erasef);
+		if (erasenum == 0) {
+			return false;
+		}
+		else {
+			// 消える色の数を見る
+			long eraseamask = erasea | (erasea << 1);
+			eraseamask |= (eraseamask << 2) | (erasea << 4);
+			long erasebmask = eraseb | (eraseb << 1);
+			erasebmask |= (erasebmask << 2) | (eraseb << 4);
+			long erasecmask = erasec | (erasec << 1);
+			erasecmask |= (erasecmask << 2) | (erasec << 4);
+			long erasedmask = erased | (erased << 1);
+			erasedmask |= (erasedmask << 2) | (erased << 4);
+			long eraseemask = erasee | (erasee << 1);
+			eraseemask |= (eraseemask << 2) | (erasee << 4);
+			long erasefmask = erasef | (erasef << 1);
+			erasefmask |= (erasefmask << 2) | (erasef << 4);
+			long tempdata = (a & eraseamask) | (b & erasebmask) | (c & erasecmask) | (d & erasedmask) | (e & eraseemask) | (f & erasefmask);
+			tempdata |= tempdata >>> 30;
+		    tempdata |= tempdata >>> 15;
+			tempdata |= (tempdata >>> 5) | (tempdata >>> 10);
+			int erasecolornum = Long.bitCount(tempdata & (long)31);
+			field.score += scoretablewithoutdb[field.nrensa][erasenum][erasecolornum - 1];
+			field.nrensa++;
+			// 消える場所の隣のおじゃまも消していく
+			
+			erasea |= ojamaa & ((erasea << 5) | (erasea >>> 5) | eraseb);
+			eraseb |= ojamab & ((eraseb << 5) | (eraseb >>> 5) | erasea | erasec);
+			erasec |= ojamac & ((erasec << 5) | (erasec >>> 5) | eraseb | erased);
+			erased |= ojamad & ((erased << 5) | (erased >>> 5) | erasec | erasee);
+			erasee |= ojamae & ((erasee << 5) | (erasee >>> 5) | erased | erasef);
+			erasef |= ojamaf & ((erasef << 5) | (erasef >>> 5) | erasee);
+			
+			// ぷよを落とす
+			// pextが使えればよかったのだが、やり方が分からない。
+			// magic bitboard におけるmagic numberを使うと、ぷよの順番が保たれないのでこれは使えない。
+			// 以上よりループを使う。
+			
+			while (erasea != 0) {
+				long temperase = erasea & (-erasea);
+				long moveplace = -temperase;
+				long saveplace = ~moveplace;
+				long mv = a & moveplace;
+				long mvo = ojamaa & moveplace;
+				mv &= mv - 1;
+				mvo &= mvo - 1;
+				a = (mv >>> 5) | (a & saveplace);
+				ojamaa = (mvo >>> 5) | (ojamaa & saveplace);
+				erasea ^= temperase;
+				erasea >>>= 5;
+			}
+			while (eraseb != 0) {
+				long temperase = eraseb & (-eraseb);
+				long moveplace = -temperase;
+				long saveplace = ~moveplace;
+				long mv = b & moveplace;
+				long mvo = ojamab & moveplace;
+				mv &= mv - 1;
+				mvo &= mvo - 1;
+				b = (mv >>> 5) | (b & saveplace);
+				ojamab = (mvo >>> 5) | (ojamab & saveplace);
+				eraseb ^= temperase;
+				eraseb >>>= 5;
+			}
+			while (erasec != 0) {
+				long temperase = erasec & (-erasec);
+				long moveplace = -temperase;
+				long saveplace = ~moveplace;
+				long mv = c & moveplace;
+				long mvo = ojamac & moveplace;
+				mv &= mv - 1;
+				mvo &= mvo - 1;
+				c = (mv >>> 5) | (c & saveplace);
+				ojamac = (mvo >>> 5) | (ojamac & saveplace);
+				erasec ^= temperase;
+				erasec >>>= 5;
+			}
+			while (erased != 0) {
+				long temperase = erased & (-erased);
+				long moveplace = -temperase;
+				long saveplace = ~moveplace;
+				long mv = d & moveplace;
+				long mvo = ojamad & moveplace;
+				mv &= mv - 1;
+				mvo &= mvo - 1;
+				d = (mv >>> 5) | (d & saveplace);
+				ojamad = (mvo >>> 5) | (ojamad & saveplace);
+				erased ^= temperase;
+				erased >>>= 5;
+			}
+			while (erasee != 0) {
+				long temperase = erasee & (-erasee);
+				long moveplace = -temperase;
+				long saveplace = ~moveplace;
+				long mv = e & moveplace;
+				long mvo = ojamae & moveplace;
+				mv &= mv - 1;
+				mvo &= mvo - 1;
+				e = (mv >>> 5) | (e & saveplace);
+				ojamae = (mvo >>> 5) | (ojamae & saveplace);
+				erasee ^= temperase;
+				erasee >>>= 5;
+			}
+			while (erasef != 0) {
+				long temperase = erasef & (-erasef);
+				long moveplace = -temperase;
+				long saveplace = ~moveplace;
+				long mv = f & moveplace;
+				long mvo = ojamaf & moveplace;
+				mv &= mv - 1;
+				mvo &= mvo - 1;
+				f = (mv >>> 5) | (f & saveplace);
+				ojamaf = (mvo >>> 5) | (ojamaf & saveplace);
+				erasef ^= temperase;
+				erasef >>>= 5;
+			}
+			field.beforefield[0] = a;
+			field.beforefield[1] = b;
+			field.beforefield[2] = c;
+			field.beforefield[3] = d;
+			field.beforefield[4] = e;
+			field.beforefield[5] = f;
+			field.beforeojama[0] = ojamaa;
+			field.beforeojama[1] = ojamab;
+			field.beforeojama[2] = ojamac;
+			field.beforeojama[3] = ojamad;
+			field.beforeojama[4] = ojamae;
+			field.beforeojama[5] = ojamaf;
+			return true;
 		}
 	}
 	
@@ -875,6 +1127,7 @@ public class FastBitNextField {
 	public void Calc(FieldInfo field, boolean thinknextactions, boolean thinkfirepossibility) {
 		while (CalcNext(field)) {
 		}
+		/*
 		long gotta = 0;
 		for (int i=0;i<6;i++) {
 			gotta |= field.beforefield[i] | field.beforeojama[i];
@@ -882,6 +1135,29 @@ public class FastBitNextField {
 		if (gotta == 0) {
 			field.score += 2100;
 		}
+		*/
+		field.afterfield = Arrays.copyOf(field.beforefield, field.beforefield.length);
+		field.afterojama = Arrays.copyOf(field.beforeojama, field.beforeojama.length);
+		if (thinknextactions) {
+			ThinkNextActions(field);
+		}
+		if (thinkfirepossibility) {
+			ThinkFirePossibility(field);
+		}
+	}
+	
+	public void CalcWithoutDouzikeshiBonus(FieldInfo field, boolean thinknextactions, boolean thinkfirepossibility) {
+		while (CalcNextWithoutDouzikeshiBonus(field)) {
+		}
+		/*
+		long gotta = 0;
+		for (int i=0;i<6;i++) {
+			gotta |= field.beforefield[i] | field.beforeojama[i];
+		}
+		if (gotta == 0) {
+			field.score += 2100;
+		}
+		*/
 		field.afterfield = Arrays.copyOf(field.beforefield, field.beforefield.length);
 		field.afterojama = Arrays.copyOf(field.beforeojama, field.beforeojama.length);
 		if (thinknextactions) {
@@ -1121,7 +1397,7 @@ public class FastBitNextField {
 			long[] fs = {savedfield[5], savedojama[5]};
 			// 連鎖を計算する
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
-			Calc(tempfi, false, false);
+			CalcWithoutDouzikeshiBonus(tempfi, false, false);
 			double tempeva = firepossibilityevaluator.apply(tempfi.score + 40, tempnumtofire);
 			if (tempeva > maxfirepossibility) {
 				maxfirepossibility = tempeva;
@@ -1185,7 +1461,7 @@ public class FastBitNextField {
 			long[] es = {savedfield[4], savedojama[4]};
 			long[] fs = {savedfield[5], savedojama[5]};
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
-			Calc(tempfi, false, false);
+			CalcWithoutDouzikeshiBonus(tempfi, false, false);
 			double tempeva = firepossibilityevaluator.apply(tempfi.score + 40, tempnumtofire);
 			if (tempeva > maxfirepossibility) {
 				maxfirepossibility = tempeva;
@@ -1259,7 +1535,7 @@ public class FastBitNextField {
 			long[] es = FallDownPuyo(savedfield[4], savedojama[4], erasee);
 			long[] fs = {savedfield[5], savedojama[5]};
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
-			Calc(tempfi, false, false);
+			CalcWithoutDouzikeshiBonus(tempfi, false, false);
 			double tempeva = firepossibilityevaluator.apply(tempfi.score + 40, tempnumtofire);
 			if (tempeva > maxfirepossibility) {
 				maxfirepossibility = tempeva;
@@ -1338,7 +1614,7 @@ public class FastBitNextField {
 			long[] es = FallDownPuyo(savedfield[4], savedojama[4], erasee);
 			long[] fs = FallDownPuyo(savedfield[5], savedojama[5], erasef);
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
-			Calc(tempfi, false, false);
+			CalcWithoutDouzikeshiBonus(tempfi, false, false);
 			double tempeva = firepossibilityevaluator.apply(tempfi.score + 40, tempnumtofire);
 			if (tempeva > maxfirepossibility) {
 				maxfirepossibility = tempeva;
@@ -1413,7 +1689,7 @@ public class FastBitNextField {
 			long[] es = FallDownPuyo(savedfield[4], savedojama[4], erasee);
 			long[] fs = FallDownPuyo(savedfield[5], savedojama[5], erasef);
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
-			Calc(tempfi, false, false);
+			CalcWithoutDouzikeshiBonus(tempfi, false, false);
 			double tempeva = firepossibilityevaluator.apply(tempfi.score + 40, tempnumtofire);
 			if (tempeva > maxfirepossibility) {
 				maxfirepossibility = tempeva;
@@ -1476,7 +1752,7 @@ public class FastBitNextField {
 			long[] es = FallDownPuyo(savedfield[4], savedojama[4], erasee);
 			long[] fs = FallDownPuyo(savedfield[5], savedojama[5], erasef);
 			FieldInfo tempfi = new FieldInfo(as, bs, cs, ds, es, fs);
-			Calc(tempfi, false, false);
+			CalcWithoutDouzikeshiBonus(tempfi, false, false);
 			double tempeva = firepossibilityevaluator.apply(tempfi.score + 40, tempnumtofire);
 			if (tempeva > maxfirepossibility) {
 				maxfirepossibility = tempeva;
@@ -1514,6 +1790,7 @@ public class FastBitNextField {
 	public void CalcPlacetoFire(FieldInfo field) {
 		while (CalcNext(field)) {
 		}
+		/*
 		long gotta = 0;
 		for (int i=0;i<6;i++) {
 			gotta |= field.beforefield[i] | field.beforeojama[i];
@@ -1521,6 +1798,7 @@ public class FastBitNextField {
 		if (gotta == 0) {
 			field.score += 2100;
 		}
+		*/
 		field.afterfield = Arrays.copyOf(field.beforefield, field.beforefield.length);
 		field.afterojama = Arrays.copyOf(field.beforeojama, field.beforeojama.length);
 		ThinkFirePossibilitywithPlacetoFire(field);
@@ -1529,6 +1807,7 @@ public class FastBitNextField {
 	public void CalcPlacetoFire(FieldInfo field, int ojamanum, int befscore) {
 		while (CalcNext(field)) {
 		}
+		/*
 		long gotta = 0;
 		for (int i=0;i<6;i++) {
 			gotta |= field.beforefield[i] | field.beforeojama[i];
@@ -1536,6 +1815,7 @@ public class FastBitNextField {
 		if (gotta == 0) {
 			field.score += 2100;
 		}
+		*/
 		int ojamadan = (ojamanum - (befscore + field.score) / 70 + 5) / 6;
 		FallDownOjama(field, ojamadan);
 		ThinkFirePossibilitywithPlacetoFire(field);
